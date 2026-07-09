@@ -1,5 +1,6 @@
 # Secrets — never commit this file
 .env
+.envrc
 
 # Python
 __pycache__/
@@ -8,6 +9,7 @@ __pycache__/
 .venv/
 venv/
 env/
+ENV/
 
 # Playwright
 .playwright/
@@ -16,8 +18,15 @@ env/
 *.db
 *.sqlite
 *.sqlite3
+db.sqlite3
 
 # Editor / OS
 .DS_Store
 .idea/
 .vscode/
+
+# Caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
