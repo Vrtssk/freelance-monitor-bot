@@ -110,7 +110,12 @@ async def mark_post_seen(
     notified: bool = False,
     complexity: int | None = None,
     price_value: int | None = None,
+    is_vacancy: bool | None = None,
 ) -> SeenPost:
+    from filters.vacancy import is_vacancy
+
+    if is_vacancy is None:
+        is_vacancy = is_vacancy(post)
     row = SeenPost(
         source=post.source,
         external_id=post.external_id,
@@ -124,6 +129,7 @@ async def mark_post_seen(
         responses=post.responses or 0,
         complexity=complexity,
         price_value=price_value,
+        is_vacancy=is_vacancy,
     )
     session.add(row)
     await session.commit()
@@ -135,12 +141,16 @@ async def get_top_relevant(session: AsyncSession, telegram_id: int, limit: int =
     """Return stored postings whose topics overlap the user's selected topics.
 
     Relevance is scored by the caller (per current time) so recency stays fresh.
+    Job vacancies / hiring are excluded (is_vacancy = False) — the user wants
+    freelance orders or long-term collaboration, not job offers.
     """
     topics = await get_user_topics(session, telegram_id)
     if not topics:
         return []
     conds = [SeenPost.matched_topics.ilike(f"%{t}%") for t in topics]
-    result = await session.execute(select(SeenPost).where(or_(*conds)))
+    result = await session.execute(
+        select(SeenPost).where(or_(*conds), SeenPost.is_vacancy.is_(False))
+    )
     return list(result.scalars().all())
 
 

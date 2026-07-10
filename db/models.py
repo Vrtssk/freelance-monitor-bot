@@ -74,6 +74,10 @@ class SeenPost(Base):
     complexity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     price_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # True for job vacancies / hiring (найм) — excluded from notifications and
+    # from the "Топ-5 актуальных" list (user wants orders, not job offers).
+    is_vacancy: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
 
 class ScrapeRun(Base):
     """Log of scrape cycles for stats/debugging."""

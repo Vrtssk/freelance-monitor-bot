@@ -2,6 +2,7 @@ import logging
 
 from filters.keywords import match_keywords
 from filters.llm import LLMClassifier
+from filters.vacancy import is_vacancy
 from models.schemas import JobPosting
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,13 @@ class HybridFilter:
 
         results: list[JobPosting] = []
         for post in posts:
+            # Hard exclude: job vacancies / hiring are never relevant to a
+            # freelance-order monitor (user wants one-off orders or long-term
+            # collaboration, not "приём на работу").
+            if is_vacancy(post):
+                logger.debug("Vacancy skipped: %s — %s", post.title[:60], post.url)
+                continue
+
             matched = match_keywords(post, user_topics)
             if not matched:
                 continue
