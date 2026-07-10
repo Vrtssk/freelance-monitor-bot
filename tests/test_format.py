@@ -103,3 +103,37 @@ def test_format_missing_budget_shows_default():
     )
     text = format_job_notification(post)
     assert "Не указан" in text
+
+
+def test_format_dedupes_repeated_kwork_description():
+    """Kwork embeds a truncated preview followed by the full text; keep one copy."""
+    body = (
+        "Нужно создать Telegram-бота для заявок. Что должен уметь: -"
+        " принимать обращения; - собирать имя и телефон"
+    )
+    repeated = body[:30] + "... " + body
+    post = JobPosting(
+        source="kwork",
+        external_id="3214327",
+        title="AI-менеджер в Telegram для заявок",
+        description=repeated,
+        url="https://kwork.ru/projects/3214327",
+        matched_topics=["chatbots"],
+    )
+    text = format_job_notification(post)
+    # the leading phrase must not appear twice
+    assert text.count("Нужно создать Telegram-бота") == 1
+    assert "🔗" in text
+
+
+def test_format_link_is_html_anchor():
+    post = JobPosting(
+        source="kwork",
+        external_id="3214327",
+        title="Заголовок",
+        description="Описание поста.",
+        url="https://kwork.ru/projects/3214327",
+        matched_topics=["chatbots"],
+    )
+    text = format_job_notification(post)
+    assert '<a href="https://kwork.ru/projects/3214327">Kwork</a>' in text

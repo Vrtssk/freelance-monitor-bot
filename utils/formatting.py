@@ -14,7 +14,7 @@ _SCRAPER_ARTIFACTS = [
     "read more",
 ]
 
-_DESC_MAX = 600
+_DESC_MAX = 500
 
 
 def _escape(text: str) -> str:
@@ -23,6 +23,28 @@ def _escape(text: str) -> str:
         .replace("<", "&lt;")
         .replace(">", "&gt;")
     )
+
+
+def _dedupe_repeated(text: str) -> str:
+    """Some exchanges (Kwork) embed a truncated preview ending in '…'/'...'
+    immediately followed by the full text, so the body repeats. Keep only the
+    preview copy when the text after the ellipsis restarts with the same lead."""
+    if "…" in text:
+        sep, sep_len = "…", 1
+    elif "..." in text:
+        sep, sep_len = "...", 3
+    else:
+        return text
+    idx = text.find(sep)
+    if idx < 20:
+        return text
+    head = text[:idx].rstrip(" .,-")
+    if len(head) < 20:
+        return text
+    tail = text[idx + sep_len:].lstrip(" .,-")
+    if tail.startswith(head[:20]):
+        return head
+    return text
 
 
 def _clean_description(text: str, title: str) -> str:
@@ -36,7 +58,8 @@ def _clean_description(text: str, title: str) -> str:
         text = re.sub(rf"\s*{re.escape(art)}\s*", " ", text, flags=re.I)
     text = re.sub(r"\s+", " ", text).strip()
     # Drop a stray ellipsis left behind by a "show full" truncation.
-    return text.strip(" …")
+    text = text.strip(" …")
+    return _dedupe_repeated(text)
 
 
 def _truncate(text: str, limit: int = _DESC_MAX) -> str:

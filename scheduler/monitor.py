@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 
 from aiogram import Bot
+from aiogram.enums import ParseMode
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import settings
@@ -120,7 +121,12 @@ class MonitorService:
             return False
         try:
             text = format_job_notification(post)
-            await self.bot.send_message(telegram_id, text, disable_web_page_preview=False)
+            await self.bot.send_message(
+                telegram_id,
+                text,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=False,
+            )
             return True
         except Exception as exc:
             logger.warning("Notify %s failed: %s", telegram_id, exc)
