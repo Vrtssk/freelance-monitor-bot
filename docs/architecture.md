@@ -28,6 +28,11 @@
 - `fl_ru.py` — FL.ru: HTML `.b-post` + JSON-LD `ItemList`.
 - `freelance_ru.py` — Freelance.ru: `<article class="task-card">`, категория `c[]=4`.
 - `weblancer.py` — Weblancer: Playwright (Next.js), категория `veb-programmirovanie-31`.
+  Ссылки на заказы имеют вид `/freelance/<категория>/<slug>-<id>/` (id ≥ 5 цифр;
+  короткие id категорий вроде `-31` игнорируются). Карточка — `<article class="bg-white …">`,
+  из неё берутся бюджет (`₽`/`$`/договорная), число заявок и дата публикации.
+  Загрузка страницы — `wait_until="domcontentloaded"` + ожидание `article.bg-white`
+  (у `networkidle` бывают таймауты из-за фоновых соединений).
 - `kwork.py` — Kwork: Playwright + фолбэк на API-endpoint.
 
 Каждый парсер возвращает список `JobPosting(source, external_id, title, ...)`.

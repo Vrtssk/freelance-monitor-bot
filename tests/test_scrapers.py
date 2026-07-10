@@ -45,3 +45,20 @@ def test_freelance_ru_parse():
     assert post.url.startswith("https://freelance.ru/task/view/")
     assert post.title
     assert post.description
+
+
+def test_weblancer_parse():
+    from scrapers.weblancer import WeblancerScraper
+
+    html = _load("weblancer.html")
+    posts = WeblancerScraper()._parse(html)
+    assert posts, "Weblancer parser returned no posts"
+    post = posts[0]
+    assert post.source == "weblancer"
+    # Job id must be the long trailing id, not the short category id (-31).
+    assert post.external_id.isdigit() and len(post.external_id) >= 5
+    assert post.url.startswith("https://www.weblancer.net/freelance/")
+    assert post.title
+    # At least one post should carry a parsed responses count and publish date.
+    assert any(p.responses for p in posts), "no responses parsed"
+    assert any(p.published_at for p in posts), "no publish dates parsed"

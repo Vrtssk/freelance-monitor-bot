@@ -11,7 +11,7 @@ from models.schemas import JobPosting
 logger = logging.getLogger(__name__)
 
 # Russian relative-time phrases -> published_at.
-_RESP_RE = re.compile(r"(\d+)\s*(?:предложен|отклик|заявок|предложени)", re.I)
+_RESP_RE = re.compile(r"(\d+)\s*(?:предложени\w*|отклик\w*|заяв\w*)", re.I)
 
 
 def parse_relative_time(text: str | None) -> datetime | None:
