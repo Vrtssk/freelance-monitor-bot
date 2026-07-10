@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 def _top5_inline_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="🔥 Топ-5 актуальных", callback_data="menu:top5")
+    kb.button(text="📋 Последние 10", callback_data="menu:recent")
     return kb.as_markup()
 
 

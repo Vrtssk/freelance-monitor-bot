@@ -12,6 +12,7 @@ and sends new, relevant IT job postings based on user-selected topics.
 - PostgreSQL storage, FastAPI health/stats endpoints
 - Docker Compose: `db` + `bot` + `api`
 - `🔥 Топ-5 актуальных` — кнопка/команда `/top` с ранжированием по релевантности
+- `📋 Последние 10` — кнопка/команда `/recent` — сырой поток последних объявлений со всех сайтов
 
 ## Quick start
 

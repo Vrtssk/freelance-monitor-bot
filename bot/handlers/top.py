@@ -3,15 +3,16 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 
 from bot.keyboards import back_kb, main_menu_kb
-from db.repository import get_top_relevant
+from db.repository import get_recent_posts, get_top_relevant
 from db.session import async_session_factory
 from datetime import datetime, timezone
-from utils.formatting import format_top_list
+from utils.formatting import format_recent_list, format_top_list
 from utils.relevance import age_hours_from, compute_relevance
 
 router = Router(name="top")
 
 _TOP_LIMIT = 5
+_RECENT_LIMIT = 10
 
 
 async def _build_top(telegram_id: int) -> list[tuple]:
@@ -32,16 +33,33 @@ async def _build_top(telegram_id: int) -> list[tuple]:
     return scored[:_TOP_LIMIT]
 
 
+async def _build_recent() -> list:
+    async with async_session_factory() as session:
+        return await get_recent_posts(session, limit=_RECENT_LIMIT)
+
+
 @router.message(Command("top"))
 async def cmd_top(message: Message):
     items = await _build_top(message.from_user.id)
     await message.answer(format_top_list(items), reply_markup=main_menu_kb())
 
 
+@router.message(Command("recent"))
+async def cmd_recent(message: Message):
+    rows = await _build_recent()
+    await message.answer(format_recent_list(rows), reply_markup=main_menu_kb())
+
+
 @router.callback_query(F.data == "menu:top5")
 async def cb_top5(callback: CallbackQuery):
     items = await _build_top(callback.from_user.id)
     await _edit(callback, format_top_list(items), back_kb())
+
+
+@router.callback_query(F.data == "menu:recent")
+async def cb_recent(callback: CallbackQuery):
+    rows = await _build_recent()
+    await _edit(callback, format_recent_list(rows), back_kb())
 
 
 async def _edit(callback: CallbackQuery, text: str, markup=None):

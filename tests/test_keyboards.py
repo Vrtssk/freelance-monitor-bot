@@ -12,13 +12,14 @@ from bot.keyboards import (
 from config.topics import TOPICS
 
 
-def test_main_menu_has_6_buttons():
+def test_main_menu_has_7_buttons():
     kb = main_menu_kb()
     assert kb.inline_keyboard is not None
     total = sum(len(row) for row in kb.inline_keyboard)
-    assert total == 6
+    assert total == 7
     labels = " ".join(b.text for row in kb.inline_keyboard for b in row)
     assert "Топ-5" in labels
+    assert "Последние 10" in labels
 
 
 def test_topics_kb_includes_all_topics_plus_done():

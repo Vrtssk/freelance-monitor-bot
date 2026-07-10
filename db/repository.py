@@ -154,6 +154,18 @@ async def get_top_relevant(session: AsyncSession, telegram_id: int, limit: int =
     return list(result.scalars().all())
 
 
+async def get_recent_posts(session: AsyncSession, limit: int = 10) -> list[SeenPost]:
+    """Return the most recently seen postings across all sources (raw feed).
+
+    Ignores topic relevance — this is the literal "last N announcements" view
+    the user opens to watch what just arrived from every exchange.
+    """
+    result = await session.execute(
+        select(SeenPost).order_by(SeenPost.seen_at.desc()).limit(limit)
+    )
+    return list(result.scalars().all())
+
+
 async def count_stats(session: AsyncSession) -> dict:
     from sqlalchemy import func
 

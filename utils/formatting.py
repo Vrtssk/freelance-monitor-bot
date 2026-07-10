@@ -109,6 +109,29 @@ def format_top_list(items: list[tuple]) -> str:
     return "\n".join(lines).strip()
 
 
+def format_recent_list(rows: list) -> str:
+    """Render the most recently seen postings as one compact message.
+
+    ``rows`` is a list of SeenPost rows ordered newest-first. Unlike the
+    relevance-ranked top list, this is a raw, topic-agnostic feed.
+    """
+    if not rows:
+        return "📋 Пока нет сохранённых объявлений."
+    lines = ["📋 <b>Последние 10 объявлений</b>", ""]
+    for i, row in enumerate(rows, 1):
+        src = SOURCES.get(row.source, {})
+        src_emoji = src.get("emoji", "")
+        src_name = src.get("name", row.source)
+        topics = _topics_labels_from_csv(row.matched_topics)
+        budget = row.budget or "Не указан"
+        title = _escape(row.title or "")
+        lines.append(f"{i}. {topics}" if topics else f"{i}.")
+        lines.append(f"<b>{title}</b> · 💰 {_escape(budget)} · {src_emoji} {src_name}")
+        lines.append(f'🔗 <a href="{row.url}">открыть на {src_name}</a>')
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
 def format_job_notification(post: JobPosting) -> str:
     """Render a JobPosting as a clean, minimal Telegram HTML notification."""
     title = _escape(post.title)

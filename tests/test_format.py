@@ -1,7 +1,7 @@
 from models.schemas import JobPosting
 
 from db.models import SeenPost
-from utils.formatting import format_job_notification, format_top_list
+from utils.formatting import format_job_notification, format_recent_list, format_top_list
 
 
 def test_format_real_post_contains_fields():
@@ -161,3 +161,35 @@ def test_format_top_list_renders():
 
 def test_format_top_list_empty():
     assert "Пока нет" in format_top_list([])
+
+
+def test_format_recent_list_renders():
+    rows = [
+        SeenPost(
+            source="kwork",
+            external_id="1",
+            title="Последнее объявление",
+            budget="10 000 ₽",
+            url="https://kwork.ru/projects/1",
+            matched_topics="chatbots",
+        ),
+        SeenPost(
+            source="fl_ru",
+            external_id="2",
+            title="Ещё одно",
+            budget=None,
+            url="https://fl.ru/projects/2",
+            matched_topics=None,
+        ),
+    ]
+    text = format_recent_list(rows)
+    assert "Последние 10" in text
+    assert "1." in text and "2." in text
+    assert "Последнее объявление" in text
+    assert "Ещё одно" in text
+    assert "Не указан" in text
+    assert "kwork.ru/projects/1" in text
+
+
+def test_format_recent_list_empty():
+    assert "Пока нет" in format_recent_list([])
