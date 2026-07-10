@@ -1,6 +1,7 @@
 from models.schemas import JobPosting
 
 from filters.keywords import match_keywords
+from filters.off_topic import is_off_topic
 from filters.vacancy import is_vacancy
 
 
@@ -85,3 +86,42 @@ def test_ordinary_freelance_task_is_not_vacancy():
         "Требуется сверстать одностраничный лендинг. Бюджет обсуждаем.",
     )
     assert is_vacancy(post) is False
+
+
+# --- off-topic guard -------------------------------------------------------
+
+
+def test_mobile_app_is_off_topic():
+    # Real top-1 offender: native iOS/Android app build. Matched "markup" only
+    # via "Верстка книжная" (portrait layout, not website markup).
+    post = _post(
+        "Разработка мобильного приложения",
+        "Платформы работы приложения: IOS/Android. Приложение IOS: Совместимость "
+        "с ОС IOS 14. Верстка книжная. Интеграция с платежной системой, почтой.",
+    )
+    assert is_off_topic(post) is True
+
+
+def test_mobile_app_with_bot_is_not_off_topic():
+    # Mobile app that genuinely needs a Telegram bot -> in-scope.
+    post = _post(
+        "Разработка мобильного приложения",
+        "Нужен telegram-бот внутри приложения для уведомлений. Android/iOS.",
+    )
+    assert is_off_topic(post) is False
+
+
+def test_website_markup_is_not_off_topic():
+    post = _post(
+        "Адаптивная вёрстка лендинга по Figma",
+        "Требуется сверстать лендинг на HTML/CSS. Pixel perfect.",
+    )
+    assert is_off_topic(post) is False
+
+
+def test_ordinary_task_is_not_off_topic():
+    post = _post(
+        "Парсинг каталога с маркетплейса",
+        "Нужен скрипт на Python для сбора данных.",
+    )
+    assert is_off_topic(post) is False

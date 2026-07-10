@@ -2,6 +2,7 @@ import logging
 
 from filters.keywords import match_keywords
 from filters.llm import LLMClassifier
+from filters.off_topic import is_off_topic
 from filters.vacancy import is_vacancy
 from models.schemas import JobPosting
 
@@ -33,6 +34,12 @@ class HybridFilter:
             # collaboration, not "приём на работу").
             if is_vacancy(post):
                 logger.debug("Vacancy skipped: %s — %s", post.title[:60], post.url)
+                continue
+
+            # Hard exclude: clearly out-of-scope domains (native mobile/desktop
+            # app builds) that a loose keyword like "верстка" can mis-match.
+            if is_off_topic(post):
+                logger.debug("Off-topic skipped: %s — %s", post.title[:60], post.url)
                 continue
 
             matched = match_keywords(post, user_topics)
