@@ -7,6 +7,7 @@ stubbed LLM classifier.
 """
 from __future__ import annotations
 
+from config.settings import settings
 from filters.llm import LLMClassifier
 from filters.pipeline import HybridFilter
 from models.schemas import JobPosting
@@ -18,6 +19,16 @@ def _make_parser() -> LLMClassifier:
     """Build a classifier without running __init__ (no settings/client needed)."""
     obj = LLMClassifier.__new__(LLMClassifier)
     return obj
+
+
+def test_classifier_reads_provider_config():
+    """Classifier is provider-agnostic: it builds an OpenAI-compatible client
+    from LLM_BASE_URL / LLM_API_KEY / LLM_ENABLED in settings (Groq, etc.)."""
+    clf = LLMClassifier()
+    assert clf.enabled == (settings.LLM_ENABLED and bool(settings.LLM_API_KEY))
+    if clf.enabled:
+        assert clf.client is not None
+        assert str(clf.client.base_url).rstrip("/") == settings.LLM_BASE_URL.rstrip("/")
 
 
 def _post(title: str, description: str = "") -> JobPosting:

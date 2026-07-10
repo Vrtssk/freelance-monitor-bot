@@ -42,6 +42,22 @@ All non-trivial logic MUST be covered by automated tests:
 4. Before pushing, run `pytest` and ensure it is green.
 5. Add `pytest` and `pytest-asyncio` to `requirements.txt`.
 
+## Library / SDK reference rule (MANDATORY)
+
+Whenever you work with a library, framework, SDK, API, or CLI tool, you MUST
+consult the **Context7 MCP server** for current documentation BEFORE writing or
+modifying any integration code (even for well-known libraries). Steps:
+
+1. Call `resolve-library-id` with the library name to find the Context7 ID
+   (format `/org/project`). Prefer High/Medium source reputation and higher
+   benchmark score.
+2. Call `query-docs` with that ID and a single, focused question (one concept
+   per call; make a separate call per distinct concept).
+3. Use the fetched docs. Do not use web search for library docs when Context7
+   suffices. Use Context7 for: API syntax, config, version migration, library
+   debugging, and setup — NOT for refactoring, business logic, or general
+   programming concepts.
+
 ## Tech stack
 
 - Python 3.12 (Docker: `python:3.12-slim`), works on 3.11+
@@ -50,7 +66,7 @@ All non-trivial logic MUST be covered by automated tests:
 - `sqlalchemy` 2.x async + `asyncpg` — PostgreSQL storage
 - `httpx` + `beautifulsoup4` — server-rendered scrapers (FL.ru, Freelance.ru)
 - `playwright` (headless Chromium) — JS-rendered scrapers (Weblancer.net, Kwork.ru)
-- `openai` (OpenAI-compatible) — LLM classification via OpenRouter / DeepSeek
+- `openai` (OpenAI-compatible) — LLM classification via Groq (was OpenRouter)
 - `apscheduler` — periodic scrape cycle
 - `docker` / `docker-compose` — postgres + bot + api services
 - Filtering: **hybrid** — keyword pre-filter then LLM classification
@@ -62,7 +78,7 @@ api/        FastAPI app (health, /stats, POST /scrape/run, /scrapers/{src}/test)
 bot/        aiogram bot: handlers, keyboards, main entry (db + scheduler + monitor)
 config/     settings (pydantic), topics (keywords, sources, demo)
 db/         sqlalchemy models, async session, repository (users/topics/posts/stats)
-filters/    keywords.py, llm.py (OpenRouter), pipeline.py (hybrid)
+filters/    keywords.py, llm.py (OpenAI-compatible LLM: Groq), pipeline.py (hybrid)
 models/     JobPosting schema (normalized posting)
 scrapers/   base + fl_ru, freelance_ru, weblancer, kwork
 scheduler/  monitor.py (scrape→filter→notify), manager.py (APScheduler)
@@ -87,10 +103,10 @@ See `docs/architecture.md` for details.
 
 ## LLM classification
 
-OpenRouter-compatible endpoint. Configured via `.env`:
-- `LLM_BASE_URL=https://openrouter.ai/api/v1`
-- `LLM_MODEL=poolside/laguna-xs-2.1:free`
-- `LLM_API_KEY=sk-or-...`
+OpenAI-compatible endpoint (Groq). Configured via `.env`:
+- `LLM_BASE_URL=https://api.groq.com/openai/v1`
+- `LLM_MODEL=llama-3.1-8b-instant`
+- `LLM_API_KEY=gsk-...`
 
 ## Topics (user-selected, IT / Разработка)
 

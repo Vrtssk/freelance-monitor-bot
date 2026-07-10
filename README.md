@@ -6,7 +6,7 @@ and sends new, relevant IT job postings based on user-selected topics.
 ## Features
 
 - Monitors 4 exchanges: **FL.ru**, **Freelance.ru**, **Weblancer**, **Kwork**
-- Hybrid filtering: keyword pre-filter → LLM classification (OpenRouter / DeepSeek)
+- Hybrid filtering: keyword pre-filter → LLM classification (Groq, OpenAI-compatible)
 - Real-time Telegram notifications via inline-keyboard menus
 - Topic selection (Front-end, Верстка, Парсинг, Скрипты, Чат-боты)
 - PostgreSQL storage, FastAPI health/stats endpoints
@@ -20,7 +20,7 @@ docker compose up -d --build
 ```
 
 Bot token: get from [@BotFather](https://t.me/BotFather).
-LLM key: get from [OpenRouter](https://openrouter.ai) (model `poolside/laguna-xs-2.1:free`).
+LLM key: get from [Groq](https://console.groq.com) (model `llama-3.1-8b-instant`).
 
 ## Project layout
 
