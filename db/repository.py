@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from db.models import SeenPost, User, UserTopic
+from filters.vacancy import is_vacancy as detect_vacancy
 from models.schemas import JobPosting
 
 
@@ -112,10 +113,8 @@ async def mark_post_seen(
     price_value: int | None = None,
     is_vacancy: bool | None = None,
 ) -> SeenPost:
-    from filters.vacancy import is_vacancy
-
     if is_vacancy is None:
-        is_vacancy = is_vacancy(post)
+        is_vacancy = detect_vacancy(post)
     row = SeenPost(
         source=post.source,
         external_id=post.external_id,
