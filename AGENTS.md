@@ -44,23 +44,53 @@ All non-trivial logic MUST be covered by automated tests:
 
 ## Tech stack
 
-- Python 3.11+, `aiogram` 3.x (Telegram bot)
-- `httpx` + `beautifulsoup4` for server-rendered scrapers (FL.ru, Freelance.ru)
-- `playwright` for JS-rendered scrapers (Weblancer.net, Kwork.ru)
-- `aiosqlite` for storage (seen posts, user settings, selected topics)
-- `openai` (OpenAI-compatible) for LLM classification of postings
-- `docker` / `docker-compose` for running the bot
+- Python 3.12 (Docker: `python:3.12-slim`), works on 3.11+
+- `aiogram` 3.x — Telegram bot
+- `fastapi` + `uvicorn` — HTTP API (health, stats, manual scrape)
+- `sqlalchemy` 2.x async + `asyncpg` — PostgreSQL storage
+- `httpx` + `beautifulsoup4` — server-rendered scrapers (FL.ru, Freelance.ru)
+- `playwright` (headless Chromium) — JS-rendered scrapers (Weblancer.net, Kwork.ru)
+- `openai` (OpenAI-compatible) — LLM classification via OpenRouter / DeepSeek
+- `apscheduler` — periodic scrape cycle
+- `docker` / `docker-compose` — postgres + bot + api services
 - Filtering: **hybrid** — keyword pre-filter then LLM classification
+
+## Architecture
+
+```
+api/        FastAPI app (health, /stats, POST /scrape/run, /scrapers/{src}/test)
+bot/        aiogram bot: handlers, keyboards, main entry (db + scheduler + monitor)
+config/     settings (pydantic), topics (keywords, sources, demo)
+db/         sqlalchemy models, async session, repository (users/topics/posts/stats)
+filters/    keywords.py, llm.py (OpenRouter), pipeline.py (hybrid)
+models/     JobPosting schema (normalized posting)
+scrapers/   base + fl_ru, freelance_ru, weblancer, kwork
+scheduler/  monitor.py (scrape→filter→notify), manager.py (APScheduler)
+utils/      formatting.py (Telegram HTML notification)
+```
+
+Flow: APScheduler → `monitor.run_cycle()` → scrapers fetch → `is_post_seen`
+skip → `HybridFilter.filter_posts` (keywords → LLM) → notify user via bot
+→ `mark_post_seen(notified=...)`.
+
+See `docs/architecture.md` for details.
 
 ## Scraping targets
 
 | Site | Render | Scraper approach |
 |------|--------|-----------------|
-| FL.ru | server | httpx + BeautifulSoup, JSON-LD ItemList |
-| Freelance.ru | server | httpx + BeautifulSoup, `.task-card` |
-| Weblancer.net | Next.js JS | Playwright headless |
-| Kwork.ru | JS | Playwright headless |
+| FL.ru | server | httpx + BeautifulSoup, JSON-LD ItemList + `.b-post` |
+| Freelance.ru | server | httpx + BeautifulSoup, `<article class="task-card">` |
+| Weblancer.net | Next.js JS | Playwright headless, category `veb-programmirovanie-31` |
+| Kwork.ru | JS | Playwright headless (+ API fallback) |
 | Хабр Фриланс | — | CLOSED (410), excluded |
+
+## LLM classification
+
+OpenRouter-compatible endpoint. Configured via `.env`:
+- `LLM_BASE_URL=https://openrouter.ai/api/v1`
+- `LLM_MODEL=deepseek/deepseek-v4-flash:free`
+- `LLM_API_KEY=sk-or-...`
 
 ## Topics (user-selected, IT / Разработка)
 

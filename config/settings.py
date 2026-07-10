@@ -2,22 +2,30 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     BOT_TOKEN: str = ""
     ALLOWED_USER_IDS: str = ""
-    DB_PATH: str = "data/bot.db"
+
+    DATABASE_URL: str = "postgresql+asyncpg://freelance:freelance@localhost:5432/freelance_bot"
+
     SCRAPE_INTERVAL: int = 300
+    SCRAPE_ENABLED: bool = True
+    USE_PLAYWRIGHT: bool = True
 
     LLM_API_KEY: str = ""
-    LLM_BASE_URL: str = "https://api.openai.com/v1"
-    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_BASE_URL: str = "https://openrouter.ai/api/v1"
+    LLM_MODEL: str = "deepseek/deepseek-v4-flash:free"
+    LLM_ENABLED: bool = True
 
     USER_AGENT: str = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0 Safari/537.36"
+        "Chrome/124.0.0.0 Safari/537.36"
     )
+
+    API_HOST: str = "0.0.0.0"
+    API_PORT: int = 8000
 
     @property
     def allowed_users(self) -> set[int] | None:

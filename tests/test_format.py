@@ -1,32 +1,37 @@
-from bot.handlers.demo import format_post
-from config.topics import DEMO_POSTS, TOPIC_BY_KEY, SOURCES
+from models.schemas import JobPosting
+
+from utils.formatting import format_job_notification
 
 
-def test_format_post_contains_title_and_budget():
-    post = DEMO_POSTS[0]
-    text = format_post(post, index=0, total=len(DEMO_POSTS))
-    assert post["title"] in text
-    assert post["budget"] in text
-    assert "Новое объявление" in text
+def test_format_real_post_contains_fields():
+    post = JobPosting(
+        source="fl_ru",
+        external_id="123",
+        title="Разработка Telegram-бота на aiogram",
+        description="Нужен бот для магазина. Интеграция с CRM.",
+        budget="35 000 ₽",
+        url="https://fl.ru/projects/123/",
+        matched_topics=["chatbots"],
+    )
+    text = format_job_notification(post)
+    assert "Разработка Telegram-бота" in text
+    assert "35 000 ₽" in text
+    assert "chatbots" not in text  # emoji label used, not raw key
+    assert "🤖" in text
+    assert "https://fl.ru/projects/123/" in text
+    assert "FL.ru" in text
 
 
-def test_format_post_uses_topic_label():
-    post = DEMO_POSTS[0]
-    topic = TOPIC_BY_KEY[post["topic_key"]]
-    text = format_post(post, index=0, total=len(DEMO_POSTS))
-    assert f"{topic['emoji']} {topic['name']}" in text
-
-
-def test_format_post_uses_source_info():
-    post = DEMO_POSTS[0]
-    src = SOURCES[post["source"]]
-    text = format_post(post, index=0, total=len(DEMO_POSTS))
-    assert src["name"] in text
-    assert src["emoji"] in text
-    assert post["url"] in text
-
-
-def test_format_post_index_counter():
-    post = DEMO_POSTS[2]
-    text = format_post(post, index=2, total=5)
-    assert "(3/5)" in text
+def test_format_escapes_html():
+    post = JobPosting(
+        source="fl_ru",
+        external_id="9",
+        title="<b>Опасный</b> заголовок & 'кавычки'",
+        description="",
+        url="https://fl.ru/projects/9/",
+        matched_topics=["scripts"],
+    )
+    text = format_job_notification(post)
+    assert "Опасный" in text
+    assert "&lt;b&gt;Опасный&lt;/b&gt;" in text
+    assert "&amp;" in text

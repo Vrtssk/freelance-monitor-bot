@@ -6,8 +6,11 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from config.settings import settings
 from bot.handlers import router
+from config.settings import settings
+from db.session import init_db
+from scheduler.manager import start_scheduler, stop_scheduler
+from scheduler.monitor import monitor_service
 
 
 async def main():
@@ -34,8 +37,17 @@ async def main():
     if settings.allowed_users:
         logging.info(f"Access restricted to: {settings.allowed_users}")
 
+    await init_db()
+    logging.info("Database initialized")
+
+    monitor_service.set_bot(bot)
+    start_scheduler()
+
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    try:
+        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    finally:
+        stop_scheduler()
 
 
 if __name__ == "__main__":

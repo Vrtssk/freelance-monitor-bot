@@ -2,10 +2,12 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
 from bot.keyboards import demo_kb, back_kb
-from bot.state import demo_index
 from config.topics import DEMO_POSTS, TOPIC_BY_KEY, SOURCES
 
 router = Router(name="demo")
+
+# In-memory per-user demo navigation index (visual preview only).
+demo_index: dict[int, int] = {}
 
 
 def format_post(post: dict, index: int, total: int) -> str:
