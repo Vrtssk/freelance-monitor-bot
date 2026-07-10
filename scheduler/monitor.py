@@ -3,8 +3,6 @@ from datetime import datetime, timezone
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
-from aiogram.types import InlineKeyboardMarkup
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import settings
@@ -22,13 +20,6 @@ from utils.formatting import format_job_notification
 from utils.relevance import estimate_complexity, parse_price
 
 logger = logging.getLogger(__name__)
-
-
-def _top5_inline_kb() -> InlineKeyboardMarkup:
-    kb = InlineKeyboardBuilder()
-    kb.button(text="🔥 Топ-5 актуальных", callback_data="menu:top5")
-    kb.button(text="📋 Последние 10", callback_data="menu:recent")
-    return kb.as_markup()
 
 
 class MonitorService:
@@ -154,7 +145,6 @@ class MonitorService:
                 text,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=False,
-                reply_markup=_top5_inline_kb(),
             )
             return True
         except Exception as exc:
