@@ -1,45 +1,20 @@
+import re
+
 from config.topics import SOURCES, TOPIC_BY_KEY
 from models.schemas import JobPosting
 
+# UI text leaked from exchange pages (e.g. Kwork's "Показать полностью" button).
+_SCRAPER_ARTIFACTS = [
+    "показать полностью",
+    "показать ещё",
+    "показать больше",
+    "читать далее",
+    "читать полностью",
+    "show full",
+    "read more",
+]
 
-def format_job_notification(post: JobPosting) -> str:
-    """Format a real JobPosting as Telegram HTML notification."""
-    topics_label = "—"
-    if post.matched_topics:
-        parts = []
-        for key in post.matched_topics:
-            t = TOPIC_BY_KEY.get(key)
-            if t:
-                parts.append(f"{t['emoji']} {t['name']}")
-            else:
-                parts.append(key)
-        topics_label = ", ".join(parts)
-
-    src = SOURCES.get(post.source, {})
-    src_emoji = src.get("emoji", "")
-    src_name = src.get("name", post.source)
-    budget = post.budget or "Не указан"
-    desc = (post.description or "").strip()
-    if len(desc) > 600:
-        desc = desc[:600].rsplit(" ", 1)[0] + "…"
-
-    lines = [
-        "🆕 <b>Новое объявление</b>",
-        "",
-        f"<b>{_escape(post.title)}</b>",
-        "━━━━━━━━━━━━━━━━━━━━━",
-        "",
-        f"🏷 <b>Тема:</b> {topics_label}",
-        f"💰 <b>Бюджет:</b> {_escape(budget)}",
-        f"📍 <b>Источник:</b> {src_emoji} {src_name}",
-    ]
-    if post.match_reason and post.match_reason not in ("keywords", "llm"):
-        lines.append(f"💡 <i>{_escape(post.match_reason)}</i>")
-    lines.append("━━━━━━━━━━━━━━━━━━━━━")
-    if desc:
-        lines.extend(["", _escape(desc)])
-    lines.extend(["", f'🔗 <a href="{post.url}">Открыть на {src_name}</a>'])
-    return "\n".join(lines)
+_DESC_MAX = 600
 
 
 def _escape(text: str) -> str:
@@ -48,3 +23,57 @@ def _escape(text: str) -> str:
         .replace("<", "&lt;")
         .replace(">", "&gt;")
     )
+
+
+def _clean_description(text: str, title: str) -> str:
+    """Strip scraper noise: a duplicated title prefix and UI 'show full' junk."""
+    if not text:
+        return ""
+    # Kwork embeds the title at the start of the description block.
+    if title and text.lower().startswith(title.lower()):
+        text = text[len(title):].lstrip(" \n\t—-")
+    for art in _SCRAPER_ARTIFACTS:
+        text = re.sub(rf"\s*{re.escape(art)}\s*", " ", text, flags=re.I)
+    text = re.sub(r"\s+", " ", text).strip()
+    # Drop a stray ellipsis left behind by a "show full" truncation.
+    return text.strip(" …")
+
+
+def _truncate(text: str, limit: int = _DESC_MAX) -> str:
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0]
+    return cut.rstrip(" ,.;:") + "…"
+
+
+def _topics_label(keys: list[str]) -> str:
+    parts = []
+    for key in keys:
+        topic = TOPIC_BY_KEY.get(key)
+        parts.append(f"{topic['emoji']} {topic['name']}" if topic else key)
+    return ", ".join(parts)
+
+
+def format_job_notification(post: JobPosting) -> str:
+    """Render a JobPosting as a clean, minimal Telegram HTML notification."""
+    title = _escape(post.title)
+    topics = _topics_label(post.matched_topics)
+
+    budget = post.budget or "Не указан"
+    src = SOURCES.get(post.source, {})
+    src_emoji = src.get("emoji", "")
+    src_name = src.get("name", post.source)
+
+    cleaned = _clean_description(post.description or "", post.title)
+    desc = _escape(_truncate(cleaned)) if cleaned else ""
+
+    lines = [f"🆕 <b>{title}</b>"]
+    if topics:
+        lines.append(topics)
+    lines.append(f"💰 {_escape(budget)}  ·  {src_emoji} {src_name}")
+    if desc:
+        lines.append("")
+        lines.append(desc)
+    lines.append("")
+    lines.append(f'🔗 <a href="{post.url}">{src_name}</a>')
+    return "\n".join(lines)
