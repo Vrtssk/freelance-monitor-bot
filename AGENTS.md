@@ -89,7 +89,7 @@ See `docs/architecture.md` for details.
 
 OpenRouter-compatible endpoint. Configured via `.env`:
 - `LLM_BASE_URL=https://openrouter.ai/api/v1`
-- `LLM_MODEL=deepseek/deepseek-v4-flash:free`
+- `LLM_MODEL=poolside/laguna-xs-2.1:free`
 - `LLM_API_KEY=sk-or-...`
 
 ## Topics (user-selected, IT / Разработка)

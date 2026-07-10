@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://openrouter.ai/api/v1"
-    LLM_MODEL: str = "deepseek/deepseek-v4-flash:free"
+    LLM_MODEL: str = "poolside/laguna-xs-2.1:free"
     LLM_ENABLED: bool = True
 
     USER_AGENT: str = (

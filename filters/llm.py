@@ -1,4 +1,3 @@
-import json
 import logging
 import re
 
@@ -10,20 +9,12 @@ from models.schemas import JobPosting
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Ты — классификатор фриланс-объявлений на русском языке.
-Определи, относится ли объявление к одной или нескольким из категорий:
-
-- frontend: Front-end (React, Vue, Angular, JS/TS, SPA)
-- markup: Верстка сайтов (HTML/CSS, лендинги, Figma→HTML)
-- parsing: Парсинг и сбор данных (scraper, сбор данных)
-- scripts: Скрипты и автоматизация (скрипты, cron, selenium, автоматизация)
-- chatbots: Чат-боты (Telegram/Discord боты, chatbot)
-
-Ответь ТОЛЬКО валидным JSON без markdown:
-{"relevant": true/false, "subtopics": ["frontend"], "reason": "кратко почему"}
-
-Если объявление не по IT-разработке или не по этим темам — relevant=false, subtopics=[].
-"""
+SYSTEM_PROMPT = """Ты — классификатор фриланс-объявлений. Категории IT-разработки:
+frontend, markup, parsing, scripts, chatbots.
+Ответь ОДНОЙ строкой без пояснений, строго в формате:
+RELEVANT: YES|NO; TOPICS: <список через запятую из допустимых категорий, или пусто>
+Пример: RELEVANT: YES; TOPICS: chatbots, parsing
+Если объявление не по IT-разработке — RELEVANT: NO; TOPICS:"""
 
 
 class LLMClassifier:
@@ -36,6 +27,7 @@ class LLMClassifier:
             self.client = AsyncOpenAI(
                 api_key=settings.LLM_API_KEY,
                 base_url=settings.LLM_BASE_URL,
+                timeout=30,
             )
 
     async def classify(
@@ -71,13 +63,13 @@ class LLMClassifier:
                 temperature=0.1,
                 max_tokens=300,
             )
-            raw = (resp.choices[0].message.content or "").strip()
-            data = self._parse_json(raw)
-            relevant = bool(data.get("relevant"))
-            subtopics = [s for s in (data.get("subtopics") or []) if isinstance(s, str)]
-            if allowed_topics:
-                subtopics = [s for s in subtopics if s in allowed_topics]
-            reason = str(data.get("reason") or "")[:300]
+            msg = resp.choices[0].message
+            # Prefer final `content`; some reasoning models leave it empty and
+            # put the answer in `reasoning`. Use reasoning only as fallback.
+            raw = (msg.content or "").strip() or (
+                getattr(msg, "reasoning", "") or ""
+            ).strip()
+            relevant, subtopics, reason = self._parse_response(raw, allowed_topics)
             if relevant and not subtopics and allowed_topics:
                 relevant = False
             return relevant, subtopics, reason
@@ -85,15 +77,18 @@ class LLMClassifier:
             logger.warning("LLM classify failed: %s", exc)
             return False, [], f"llm_error: {exc}"
 
-    def _parse_json(self, raw: str) -> dict:
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = re.sub(r"^```(?:json)?\s*", "", raw)
-            raw = re.sub(r"\s*```$", "", raw)
-        try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
-            m = re.search(r"\{.*\}", raw, re.S)
-            if m:
-                return json.loads(m.group(0))
-            raise
+    def _parse_response(self, raw: str, allowed_topics: set[str]) -> tuple[bool, list[str], str]:
+        """
+        Parse a simple 'RELEVANT: YES; TOPICS: a, b' answer (model-agnostic).
+        Topics are read only from the portion after 'TOPICS:' so that category
+        names mentioned elsewhere in a reasoning trace don't cause false hits.
+        """
+        low = raw.lower()
+        relevant = bool(re.search(r"relevant\s*[:=]\s*(yes|true|да|1)", low))
+        topics_part = ""
+        tm = re.search(r"topics?\s*[:=]\s*(.+?)(?:\n|$)", low)
+        if tm:
+            topics_part = tm.group(1)
+        topics: list[str] = [k for k in allowed_topics if k.lower() in topics_part]
+        reason = raw[:300] if raw else "llm"
+        return relevant, topics, reason

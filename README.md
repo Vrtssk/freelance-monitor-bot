@@ -20,12 +20,13 @@ docker compose up -d --build
 ```
 
 Bot token: get from [@BotFather](https://t.me/BotFather).
-LLM key: get from [OpenRouter](https://openrouter.ai) (model `deepseek/deepseek-v4-flash:free`).
+LLM key: get from [OpenRouter](https://openrouter.ai) (model `poolside/laguna-xs-2.1:free`).
 
 ## Project layout
 
-See `AGENTS.md` (git/commit rules, tech stack) and `docs/architecture.md`
-(full backend architecture) and `docs/bot.md` (bot UI screens).
+See `AGENTS.md` (git/commit rules, tech stack), `docs/architecture.md`
+(full backend architecture), `docs/bot.md` (bot UI screens), and
+`docs/filters.md` (hybrid keyword + LLM classification pipeline).
 
 ## Tests
 

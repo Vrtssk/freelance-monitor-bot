@@ -84,21 +84,17 @@ async def is_monitoring_enabled(session: AsyncSession, telegram_id: int) -> bool
 
 
 async def get_active_subscribers(session: AsyncSession) -> list[User]:
+    """Subscribers with monitoring enabled and their topics eagerly loaded.
+
+    Uses selectinload so user.topics is available without a lazy trigger,
+    which would raise MissingGreenlet in async context.
+    """
     result = await session.execute(
         select(User)
+        .options(selectinload(User.topics))
         .where(User.is_active.is_(True), User.monitoring_enabled.is_(True))
     )
-    users = list(result.scalars().all())
-    if not users:
-        return users
-    ids = [u.id for u in users]
-    topics_res = await session.execute(select(UserTopic).where(UserTopic.user_id.in_(ids)))
-    grouped: dict[int, list[UserTopic]] = {}
-    for t in topics_res.scalars().all():
-        grouped.setdefault(t.user_id, []).append(t)
-    for u in users:
-        u.topics = grouped.get(u.id, [])
-    return users
+    return list(result.scalars().unique().all())
 
 
 async def is_post_seen(session: AsyncSession, source: str, external_id: str) -> bool:

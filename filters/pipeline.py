@@ -33,13 +33,19 @@ class HybridFilter:
 
             if self.llm.enabled:
                 relevant, llm_topics, reason = await self.llm.classify(post, user_topics)
-                if not relevant:
+                if reason.startswith("llm_error") or reason == "llm_disabled":
+                    # LLM unavailable — fall back to keyword matches
+                    post.matched_topics = matched
+                    post.match_reason = "keywords (llm unavailable)"
+                    results.append(post)
+                elif relevant:
+                    post.matched_topics = llm_topics or matched
+                    post.match_reason = reason or "llm"
+                    results.append(post)
+                else:
                     logger.debug("LLM rejected: %s — %s", post.title[:60], reason)
-                    continue
-                post.matched_topics = llm_topics or matched
-                post.match_reason = reason or "llm"
             else:
                 post.matched_topics = matched
                 post.match_reason = "keywords"
-            results.append(post)
+                results.append(post)
         return results
