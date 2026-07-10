@@ -20,10 +20,11 @@ def test_main_menu_has_8_buttons():
     labels = " ".join(b.text for row in kb.inline_keyboard for b in row)
     assert "Топ-5" in labels
     assert "Последние 10" in labels
-    # The web-board button is a URL button, not a callback.
-    url_btn = [b for row in kb.inline_keyboard for b in row if b.text.startswith("🌐")]
-    assert url_btn, "web board URL button missing"
-    assert url_btn[0].url.startswith("http")
+    # The web-board button is a callback that sends a clickable text link
+    # (URL buttons can't use localhost/private hosts).
+    board_btn = [b for row in kb.inline_keyboard for b in row if b.text.startswith("🌐")]
+    assert board_btn, "web board button missing"
+    assert board_btn[0].callback_data == "menu:board"
 
 
 def test_topics_kb_includes_all_topics_plus_done():

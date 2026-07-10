@@ -1,7 +1,6 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from config.settings import settings
 from config.topics import TOPICS
 
 
@@ -14,8 +13,9 @@ def main_menu_kb() -> InlineKeyboardMarkup:
     kb.button(text="📊 Статистика", callback_data="menu:stats")
     kb.button(text="🔔 Демо-объявление", callback_data="menu:demo")
     kb.button(text="ℹ️ Помощь", callback_data="menu:help")
-    # Open the local web board in the browser.
-    kb.button(text="🌐 Все объявления (сайт)", url=settings.WEB_BASE_URL)
+    # Open the local web board. Sent as a clickable text link (callback), not a
+    # URL button — Telegram rejects "localhost"/private URLs in inline URL buttons.
+    kb.button(text="🌐 Все объявления (сайт)", callback_data="menu:board")
     kb.adjust(1, 1, 2, 2, 1)
     return kb.as_markup()
 

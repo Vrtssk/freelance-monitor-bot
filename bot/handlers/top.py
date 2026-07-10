@@ -62,6 +62,21 @@ async def cb_recent(callback: CallbackQuery):
     await _edit(callback, format_recent_list(rows), back_kb())
 
 
+@router.callback_query(F.data == "menu:board")
+async def cb_board(callback: CallbackQuery):
+    from config.settings import settings
+
+    url = settings.WEB_BASE_URL
+    text = (
+        f"🌐 <b>Доска всех объявлений</b>\n\n"
+        f"Открой в браузере (на том же компьютере, где поднят docker):\n"
+        f"{url}\n\n"
+        f"Там показаны все собранные посты со всех бирж, с фильтром по сайту."
+    )
+    await callback.message.answer(text)
+    await callback.answer()
+
+
 async def _edit(callback: CallbackQuery, text: str, markup=None):
     try:
         await callback.message.edit_text(text, reply_markup=markup)
