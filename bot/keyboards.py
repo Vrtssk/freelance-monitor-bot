@@ -1,6 +1,7 @@
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from config.settings import settings
 from config.topics import TOPICS
 
 
@@ -13,6 +14,8 @@ def main_menu_kb() -> InlineKeyboardMarkup:
     kb.button(text="📊 Статистика", callback_data="menu:stats")
     kb.button(text="🔔 Демо-объявление", callback_data="menu:demo")
     kb.button(text="ℹ️ Помощь", callback_data="menu:help")
+    # Open the local web board in the browser.
+    kb.button(text="🌐 Все объявления (сайт)", url=settings.WEB_BASE_URL)
     kb.adjust(1, 1, 2, 2, 1)
     return kb.as_markup()
 

@@ -1,11 +1,13 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from config.settings import settings
-from db.repository import count_stats
+from api.board import render_jobs_page
+from db.repository import count_stats, get_all_posts
 from db.session import async_session_factory, init_db
 from scrapers import get_all_scrapers
 from scheduler.monitor import monitor_service
@@ -46,6 +48,14 @@ async def health():
         scrape_enabled=settings.SCRAPE_ENABLED,
         llm_enabled=settings.LLM_ENABLED and bool(settings.LLM_API_KEY),
     )
+
+
+@app.get("/", response_class=HTMLResponse)
+async def board(request: Request):
+    """Web board: all collected postings, newest first."""
+    async with async_session_factory() as session:
+        rows = await get_all_posts(session)
+    return HTMLResponse(render_jobs_page(rows, base_url=str(request.base_url)))
 
 
 @app.get("/stats")

@@ -165,6 +165,18 @@ async def get_recent_posts(session: AsyncSession, limit: int = 10) -> list[SeenP
     return list(result.scalars().all())
 
 
+async def get_all_posts(session: AsyncSession, limit: int = 300) -> list[SeenPost]:
+    """Return all stored postings (the full board), newest first.
+
+    Used by the web board view. Vacancies are still shown there so the user can
+    scan everything that arrived, but flagged with a badge.
+    """
+    result = await session.execute(
+        select(SeenPost).order_by(SeenPost.seen_at.desc()).limit(limit)
+    )
+    return list(result.scalars().all())
+
+
 async def count_stats(session: AsyncSession) -> dict:
     from sqlalchemy import func
 

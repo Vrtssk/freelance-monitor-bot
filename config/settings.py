@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
 
+    # Public base URL of the web board, used for the "Все объявления" button
+    # in the bot menu. Point this at the host/port where the API is reachable
+    # from the user's browser (default: local docker mapping).
+    WEB_BASE_URL: str = "http://localhost:8000"
+
     @property
     def allowed_users(self) -> set[int] | None:
         if not self.ALLOWED_USER_IDS.strip():

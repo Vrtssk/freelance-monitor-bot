@@ -13,6 +13,7 @@ and sends new, relevant IT job postings based on user-selected topics.
 - Docker Compose: `db` + `bot` + `api`
 - `🔥 Топ-5 актуальных` — кнопка/команда `/top` с ранжированием по релевантности
 - `📋 Последние 10` — кнопка/команда `/recent` — сырой поток последних объявлений со всех сайтов
+- `🌐 Все объявления (сайт)` — URL-кнопка в меню открывает локальную доску всех собранных постов (`GET /` API, см. `docs/board.md`)
 
 ## Quick start
 
