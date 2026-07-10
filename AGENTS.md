@@ -4,7 +4,7 @@ Project instructions for AI agents working on this repo.
 
 ## Repository
 
-- **Remote:** `git@github.com:Vrtssk/freelance-monitor-bot.git` (private)
+- **Remote:** `git@github.com:Vrtssk/freelance-monitor-bot.git` (public)
 - **Hosting:** local Docker first, then a VPS/server.
 
 ## Git workflow (MANDATORY RULE)

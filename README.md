@@ -1,39 +1,196 @@
-# freelance-monitor-bot
+# 🤖 Freelance Monitor Bot
 
-Telegram bot (personal use) that monitors Russian & Belarusian freelance exchanges
-and sends new, relevant IT job postings based on user-selected topics.
+> Telegram-бот для мониторинга фриланс-бирж с ИИ-фильтрацией релевантных заказов
+> и локальной веб-доской всех объявлений.
+>
+> *Telegram bot that monitors freelance exchanges, filters relevant jobs with an
+> LLM classifier, and ships a local web board of every collected posting.*
 
-## Features
+[![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/docker--compose-ready-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-73%20passing-brightgreen.svg)](#testing)
 
-- Monitors 4 exchanges: **FL.ru**, **Freelance.ru**, **Weblancer**, **Kwork**
-- Hybrid filtering: keyword pre-filter → LLM classification (Groq, OpenAI-compatible)
-- Real-time Telegram notifications via inline-keyboard menus
-- Topic selection (Front-end, Верстка, Парсинг, Скрипты, Чат-боты)
-- PostgreSQL storage, FastAPI health/stats endpoints
-- Docker Compose: `db` + `bot` + `api`
-- `🔥 Топ-5 актуальных` — кнопка/команда `/top` с ранжированием по релевантности
-- `📋 Последние 10` — кнопка/команда `/recent` — сырой поток последних объявлений со всех сайтов
-- `🌐 Все объявления (сайт)` — URL-кнопка в меню открывает локальную доску всех собранных постов (`GET /` API, см. `docs/board.md`)
+---
 
-## Quick start
+## ✨ Что умеет
+
+- 🔎 **Мониторинг 4 бирж** — FL.ru, Freelance.ru, Weblancer, Kwork
+  (server-rendered + headless Chromium для JS-сайтов).
+- 🧠 **Гибридная фильтрация** — ключевой предфильтр → уточняющая
+  классификация через LLM (Groq / OpenAI-совместимый API).
+- 🎯 **Узкие темы** — Front-end, Вёрстка сайтов, Парсинг и сбор данных,
+  Скрипты и автоматизация, Чат-боты / Telegram-боты.
+- 🚫 **Без мусора** — автоматически отсекает вакансии/найм и заказы вне тем
+  (нативные мобильные/десктоп-приложения, игры, ML-исследования и т.п.).
+- 🔥 **Топ-5 актуальных** — ранжирование по релевантности (отклики,
+  сложность, свежесть, цена).
+- 📋 **Последние 10** — сырой поток последних пришедших объявлений со всех сайтов.
+- 🌐 **Веб-доска** — красивый сайт со всеми собранными постами, фильтром по
+  бирже и автообновлением.
+- ⚙️ **Управление из бота** — выбор тем, пауза мониторинга, статистика.
+- 🐘 **PostgreSQL** для хранения и дедупа (без повторных уведомлений).
+
+---
+
+## 🏗 Архитектура
+
+```
+            ┌────────────┐
+  APScheduler│  Monitor   │  scrape → filter → notify
+   (каждые N │  Service   │
+    минут)   └─────┬──────┘
+                    │
+        ┌───────────┼───────────────────────┐
+        ▼           ▼                        ▼
+   Scrapers    HybridFilter            Telegram Bot
+   (4 биржи)   keywords → LLM          (aiogram)
+                   │                        │
+                   ▼                        ▼
+              PostgreSQL              FastAPI (health / stats / 🌐 board)
+```
+
+Поток: `APScheduler` → `monitor.run_cycle()` → скраперы → `is_post_seen`
+(пропуск уже виденных) → `HybridFilter.filter_posts` (ключевые слова → LLM)
+→ уведомление в Telegram → `mark_post_seen`. Подробнее в [`docs/architecture.md`](docs/architecture.md).
+
+---
+
+## 🧰 Технологии
+
+| Слой | Стек |
+|------|------|
+| Язык | Python 3.12 |
+| Бот | [aiogram](https://github.com/aiogram/aiogram) 3.x |
+| API | FastAPI + Uvicorn |
+| БД | PostgreSQL + SQLAlchemy 2.x (async, `asyncpg`) |
+| Скрапинг | `httpx` + `beautifulsoup4` (HTML), Playwright (JS) |
+| LLM | OpenAI-совместимый клиент → Groq (`llama-3.1-8b-instant`) |
+| Планировщик | APScheduler |
+| Инфра | Docker / docker-compose |
+
+---
+
+## 🚀 Быстрый старт
 
 ```bash
-cp .env.example .env   # fill BOT_TOKEN, LLM_API_KEY, DATABASE_URL
+# 1. Клонировать
+git clone https://github.com/Vrtssk/freelance-monitor-bot.git
+cd freelance-monitor-bot
+
+# 2. Заполнить переменные окружения
+cp .env.example .env
+#   отредактируй .env: BOT_TOKEN, LLM_API_KEY, DATABASE_URL
+
+# 3. Поднять всё (bot + api + postgres)
 docker compose up -d --build
 ```
 
-Bot token: get from [@BotFather](https://t.me/BotFather).
-LLM key: get from [Groq](https://console.groq.com) (model `llama-3.1-8b-instant`).
+Готово — бот начнёт мониторинг, а доска откроется на
+**http://localhost:8000**.
 
-## Project layout
+### Команды бота
 
-See `AGENTS.md` (git/commit rules, tech stack), `docs/architecture.md`
-(full backend architecture), `docs/bot.md` (bot UI screens), `docs/filters.md`
-(hybrid keyword + LLM classification pipeline), and `docs/top5.md`
-(Топ-5 актуальных: релевантность и точки входа).
+| Команда | Назначение |
+|---------|------------|
+| `/start` | главное меню |
+| `/top` | 🔥 Топ-5 актуальных объявлений |
+| `/recent` | 📋 Последние 10 объявлений |
+| `/topics` | выбор тем |
+| `/help` | справка |
 
-## Tests
+---
+
+## ⚙️ Конфигурация (`.env`)
+
+| Переменная | Описание | По умолчанию |
+|------------|----------|--------------|
+| `BOT_TOKEN` | токен от [@BotFather](https://t.me/BotFather) | — |
+| `LLM_API_KEY` | ключ Groq (или любого OpenAI-совместимого API) | — |
+| `LLM_BASE_URL` | базовый URL LLM-провайдера | `https://api.groq.com/openai/v1` |
+| `LLM_MODEL` | модель классификации | `llama-3.1-8b-instant` |
+| `DATABASE_URL` | строка подключения к Postgres | `postgresql+asyncpg://...` |
+| `SCRAPE_INTERVAL` | период цикла мониторинга, сек | `300` |
+| `SCRAPE_ENABLED` | вкл/выкл скрапинг | `true` |
+| `USE_PLAYWRIGHT` | использовать headless-браузер для JS-сайтов | `true` |
+| `WEB_BASE_URL` | базовый URL веб-доски (для кнопки в боте) | `http://localhost:8000` |
+| `ALLOWED_USER_IDS` | ограничить доступ списком tg-id (через запятую) | *(все)* |
+
+---
+
+## 🔎 Как работает фильтрация
+
+Два этапа, чтобы не платить за LLM за заведомо нерелевантное:
+
+1. **Ключевой предфильтр** (`filters/keywords.py`) — быстро отсекает по
+   ключевым словам выбранных тем.
+2. **LLM-классификация** (`filters/llm.py`) — уточняет, релевантен ли заказ
+   и к каким темам относится.
+
+Дополнительно две детерминированные «воронки» отсекают ложные срабатывания:
+
+- `filters/vacancy.py` — выбрасывает вакансии/найм (собеседования, «в штат»,
+  оклад…).
+- `filters/off_topic.py` — выбрасывает заказы вне тем (нативные моб./десктоп-
+  приложения, игры), даже если они случайно зацепились за слово «верстка».
+
+Подробнее — в [`docs/filters.md`](docs/filters.md).
+
+---
+
+## 🖥 Веб-доска
+
+Локальный сайт со всеми собранными объявлениями: тёмная тема, карточки
+(источник, бюджет, темы, описание, дата), фильтр по бирже и автообновление.
+Открывается кнопкой `🌐 Все объявления (сайт)` в меню бота (приходит
+кликабельная ссылка, т.к. Telegram не принимает `localhost` в URL-кнопках).
+
+---
+
+## 🧪 Тестирование
 
 ```bash
-.venv/bin/python -m pytest
+python -m pytest
 ```
+
+Покрыты фильтры (ключевой + LLM-парсер + вакансии + off-topic), скраперы
+(на сохранённых HTML-фикстурах), форматирование уведомлений и доски,
+ранжирование релевантности и клавиатуры. Конфигурация тестов — в `pytest.ini`.
+
+---
+
+## 📂 Структура проекта
+
+```
+api/          FastAPI: health, stats, GET / (веб-доска)
+bot/          aiogram: handlers, keyboards, main
+config/       настройки (pydantic), темы и источники
+db/           SQLAlchemy-модели, сессия, миграции, репозиторий
+filters/      keywords → llm → vacancy → off_topic (pipeline)
+models/       нормализованная схема JobPosting
+scrapers/     base + fl_ru, freelance_ru, weblancer, kwork
+scheduler/    APScheduler: monitor (scrape→filter→notify), manager
+utils/        relevance (ранжирование), formatting (уведомления/доска)
+docs/         architecture, bot, filters, top5, board
+tests/        зеркало структуры + фикстуры
+```
+
+---
+
+## 🗺 Возможные улучшения
+
+- Мультиязычность / мультипользователь (сейчас заточено под одного владельца).
+- Кнопка «отметить прочитанным / скрыть» прямо в уведомлении.
+- Дополнительные биржи и Telegram-каналы как источники.
+- Деплой-гайд (VPS) и CI (GitHub Actions) с прогоном тестов.
+
+---
+
+## 📄 Лицензия
+
+Проект распространяется под [MIT](LICENSE).
+
+## 👤 Автор
+
+Сделано как личный инструмент мониторинга фриланс-бирж и выложено как
+портфолио-проект. Предложения и PR приветствуются.
