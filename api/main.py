@@ -5,12 +5,15 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+from datetime import datetime, timezone
+
 from config.settings import settings
-from api.board import render_jobs_page
-from db.repository import count_stats, get_all_posts
+from api.board import render_jobs_page, render_top_page
+from db.repository import count_stats, get_all_posts, get_relevant_posts
 from db.session import async_session_factory, init_db
 from scrapers import get_all_scrapers
 from scheduler.monitor import monitor_service
+from utils.relevance import age_hours_from, compute_relevance
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +59,28 @@ async def board(request: Request):
     async with async_session_factory() as session:
         rows = await get_all_posts(session)
     return HTMLResponse(render_jobs_page(rows, base_url=str(request.base_url)))
+
+
+@app.get("/top", response_class=HTMLResponse)
+async def board_top(request: Request, limit: int = 10):
+    """Web board: top-N most relevant (non-vacancy) postings."""
+    async with async_session_factory() as session:
+        rows = await get_relevant_posts(session)
+    now = datetime.now(timezone.utc)
+    scored = [
+        (
+            row,
+            compute_relevance(
+                responses=row.responses or 0,
+                age_hours=age_hours_from(now, row.published_at, row.seen_at),
+                complexity=row.complexity or 3,
+                price=row.price_value,
+            ),
+        )
+        for row in rows
+    ]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return HTMLResponse(render_top_page(scored[:limit], base_url=str(request.base_url)))
 
 
 @app.get("/stats")

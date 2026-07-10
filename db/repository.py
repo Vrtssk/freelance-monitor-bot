@@ -177,6 +177,22 @@ async def get_all_posts(session: AsyncSession, limit: int = 300) -> list[SeenPos
     return list(result.scalars().all())
 
 
+async def get_relevant_posts(session: AsyncSession, limit: int = 500) -> list[SeenPost]:
+    """Return non-vacancy postings for relevance ranking on the web board.
+
+    Unlike ``get_top_relevant`` this is not tied to a Telegram user's topics —
+    the public board ranks everything that isn't a vacancy. Scoring is done by
+    the caller so recency stays fresh.
+    """
+    result = await session.execute(
+        select(SeenPost)
+        .where(SeenPost.is_vacancy.is_(False))
+        .order_by(SeenPost.seen_at.desc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
 async def count_stats(session: AsyncSession) -> dict:
     from sqlalchemy import func
 

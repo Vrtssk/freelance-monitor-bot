@@ -54,6 +54,12 @@ h1 .dot{color:var(--accent2)}
   padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px}
 .badge.vac{background:rgba(255,80,80,.16);color:#ff8a8a;border:1px solid rgba(255,80,80,.35)}
 .badge.notif{background:rgba(54,214,160,.14);color:var(--accent2);border:1px solid rgba(54,214,160,.35)}
+.badge.score{background:rgba(108,140,255,.18);color:#a9bcff;border:1px solid rgba(108,140,255,.4)}
+.nav{max-width:1200px;margin:16px auto 0;padding:0 18px;display:flex;gap:10px;flex-wrap:wrap}
+.navlink{text-decoration:none;color:var(--muted);background:var(--panel2);border:1px solid var(--line);
+  padding:9px 16px;border-radius:12px;font-size:14px;font-weight:600;transition:.15s}
+.navlink:hover{color:var(--text);border-color:var(--accent)}
+.navlink.active{background:var(--accent);color:#0b1020;border-color:var(--accent)}
 .empty{text-align:center;color:var(--muted);padding:60px 0;font-size:15px}
 footer{text-align:center;color:#5b658a;font-size:12px;padding:24px}
 """
@@ -85,48 +91,61 @@ def _clean(text: str, limit: int = 320) -> str:
     return t[:limit].rstrip(" ,.;:") + ("…" if len(t) > limit else "")
 
 
-def render_jobs_page(rows: list, base_url: str = "") -> str:
-    cards = []
-    for r in rows:
-        src = SOURCES.get(r.source, {})
-        s_emoji = src.get("emoji", "•")
-        s_name = src.get("name", r.source)
-        topics = _topics_labels(r.matched_topics)
-        chips = "".join(f'<span class="chip">{escape(c)}</span>' for c in topics)
-        badge = ""
-        if getattr(r, "is_vacancy", False):
-            badge = '<span class="badge vac">вакансия</span>'
-        elif getattr(r, "notified", False):
-            badge = '<span class="badge notif">прислано</span>'
-        desc = _clean(r.description or "")
-        url = r.url or "#"
-        chips_html = f'<div class="chips">{chips}</div>' if chips else ""
-        desc_html = f'<div class="desc">{escape(desc)}</div>' if desc else ""
-        cards.append(
-            f'\n        <article class="card" data-src="{escape(r.source)}">\n'
-            f"          {badge}\n"
-            f'          <div class="top">\n'
-            f'            <span class="src"><span class="em">{s_emoji}</span>{escape(s_name)}</span>\n'
-            f'            <span class="date">{escape(_fmt_date(r.seen_at))}</span>\n'
-            f"          </div>\n"
-            f'          <h3 class="title"><a href="{escape(url)}" target="_blank" rel="noopener">'
-            f'{escape(r.title or "Без названия")}</a></h3>\n'
-            f'          <div class="meta">\n'
-            f'            <span class="budget">💰 {escape(r.budget or "Не указан")}</span>\n'
-            f"          </div>\n"
-            f"          {chips_html}\n"
-            f"          {desc_html}\n"
-            f"        </article>"
-        )
+def _card_html(r, score: float | None = None) -> str:
+    src = SOURCES.get(r.source, {})
+    s_emoji = src.get("emoji", "•")
+    s_name = src.get("name", r.source)
+    topics = _topics_labels(r.matched_topics)
+    chips = "".join(f'<span class="chip">{escape(c)}</span>' for c in topics)
+    badge = ""
+    if score is not None:
+        badge = f'<span class="badge score">{int(score * 100)}%</span>'
+    elif getattr(r, "is_vacancy", False):
+        badge = '<span class="badge vac">вакансия</span>'
+    elif getattr(r, "notified", False):
+        badge = '<span class="badge notif">прислано</span>'
+    desc = _clean(r.description or "")
+    url = r.url or "#"
+    chips_html = f'<div class="chips">{chips}</div>' if chips else ""
+    desc_html = f'<div class="desc">{escape(desc)}</div>' if desc else ""
+    return (
+        f'\n        <article class="card" data-src="{escape(r.source)}">\n'
+        f"          {badge}\n"
+        f'          <div class="top">\n'
+        f'            <span class="src"><span class="em">{s_emoji}</span>{escape(s_name)}</span>\n'
+        f'            <span class="date">{escape(_fmt_date(r.seen_at))}</span>\n'
+        f"          </div>\n"
+        f'          <h3 class="title"><a href="{escape(url)}" target="_blank" rel="noopener">'
+        f'{escape(r.title or "Без названия")}</a></h3>\n'
+        f'          <div class="meta">\n'
+        f'            <span class="budget">💰 {escape(r.budget or "Не указан")}</span>\n'
+        f"          </div>\n"
+        f"          {chips_html}\n"
+        f"          {desc_html}\n"
+        f"        </article>"
+    )
 
-    grid = "\n".join(cards) if cards else '<div class="empty">Пока нет сохранённых объявлений.</div>'
 
+def _nav_html(active: str) -> str:
+    def link(href, label, key):
+        cls = "navlink active" if key == active else "navlink"
+        return f'<a class="{cls}" href="{href}">{label}</a>'
+
+    return (
+        '<nav class="nav">'
+        + link("/", "🗂 Все объявления", "all")
+        + link("/top", "🔥 Топ-10 релевантных", "top")
+        + "</nav>"
+    )
+
+
+def _page(title: str, subtitle: str, meta: str, active: str, body: str, script: str = "") -> str:
     return f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Фриланс-монитор · все объявления</title>
+<title>{escape(title)}</title>
 <meta http-equiv="refresh" content="90">
 <style>{_CSS}</style>
 </head>
@@ -134,30 +153,60 @@ def render_jobs_page(rows: list, base_url: str = "") -> str:
 <header>
   <div>
     <h1>Фриланс-монитор <span class="dot">●</span></h1>
-    <div class="sub">Все собранные объявления со всех бирж · обновляется автоматически</div>
+    <div class="sub">{subtitle}</div>
   </div>
-  <div class="sub">{len(rows)} объявлений в базе</div>
+  <div class="sub">{meta}</div>
 </header>
+{_nav_html(active)}
 <div class="wrap">
-  <div class="filters" id="filters"></div>
-  <div class="grid" id="grid">{grid}</div>
+{body}
 </div>
 <footer>freelance-monitor-bot · локальная доска объявлений</footer>
-<script>
+{script}
+</body>
+</html>"""
+
+
+def render_jobs_page(rows: list, base_url: str = "") -> str:
+    cards = [_card_html(r) for r in rows]
+    grid = "\n".join(cards) if cards else '<div class="empty">Пока нет сохранённых объявлений.</div>'
+    body = f"""  <div class="filters" id="filters"></div>
+  <div class="grid" id="grid">{grid}</div>"""
+    script = """<script>
 const grid=document.getElementById('grid');
 const filters=document.getElementById('filters');
 const sources=[...new Set([...grid.querySelectorAll('.card')].map(c=>c.dataset.src))];
-function mk(label,src,active){{
+function mk(label,src,active){
   const b=document.createElement('button');b.className='fbtn'+(active?' active':'');
   b.textContent=label;b.onclick=()=>apply(src,b);return b;
-}}
-function apply(src,btn){{
+}
+function apply(src,btn){
   [...filters.children].forEach(x=>x.classList.remove('active'));
   btn.classList.add('active');
-  [...grid.children].forEach(c=>{{c.style.display=(!src||c.dataset.src===src)?'':'none';}});
-}}
+  [...grid.children].forEach(c=>{c.style.display=(!src||c.dataset.src===src)?'':'none';});
+}
 filters.appendChild(mk('Все',null,true));
 sources.forEach(s=>filters.appendChild(mk(s,s,false)));
-</script>
-</body>
-</html>"""
+</script>"""
+    return _page(
+        title="Фриланс-монитор · все объявления",
+        subtitle="Все собранные объявления со всех бирж · обновляется автоматически",
+        meta=f"{len(rows)} объявлений в базе",
+        active="all",
+        body=body,
+        script=script,
+    )
+
+
+def render_top_page(scored: list, base_url: str = "") -> str:
+    """Render the top-N relevant postings. ``scored`` is a list of (row, score)."""
+    cards = [_card_html(r, score=s) for r, s in scored]
+    grid = "\n".join(cards) if cards else '<div class="empty">Пока нет подходящих объявлений.</div>'
+    body = f'  <div class="grid" id="grid">{grid}</div>'
+    return _page(
+        title="Фриланс-монитор · топ релевантных",
+        subtitle="Самые релевантные заказы: мало откликов, свежие, проще · без вакансий",
+        meta=f"топ-{len(scored)}",
+        active="top",
+        body=body,
+    )

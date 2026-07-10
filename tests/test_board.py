@@ -1,6 +1,6 @@
 from db.models import SeenPost
 
-from api.board import render_jobs_page
+from api.board import render_jobs_page, render_top_page
 
 
 def _row(**kw) -> SeenPost:
@@ -41,3 +41,24 @@ def test_render_empty():
 def test_render_has_source_filter():
     html = render_jobs_page([_row(source="kwork", external_id="2", title="Kwork пост")])
     assert "kwork" in html  # data-src used by JS filter
+
+
+def test_render_has_nav_links():
+    html = render_jobs_page([_row()])
+    assert 'href="/"' in html
+    assert 'href="/top"' in html
+    assert "Топ-10 релевантных" in html
+
+
+def test_render_top_page_shows_score_badge():
+    html = render_top_page([(_row(), 0.87)])
+    assert "87%" in html
+    assert "badge score" in html
+    assert "Тестовое объявление" in html
+    # nav marks the top page active
+    assert 'class="navlink active" href="/top"' in html
+
+
+def test_render_top_page_empty():
+    html = render_top_page([])
+    assert "Пока нет подходящих" in html
