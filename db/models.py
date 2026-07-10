@@ -5,6 +5,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -64,6 +65,14 @@ class SeenPost(Base):
     matched_topics: Mapped[str | None] = mapped_column(String(255), nullable=True)
     notified: Mapped[bool] = mapped_column(Boolean, default=False)
     seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Signals used to rank postings by relevance (top-5 feature).
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    responses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    complexity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    price_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class ScrapeRun(Base):

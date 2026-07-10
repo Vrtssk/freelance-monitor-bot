@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 
 from config.settings import settings
 from models.schemas import JobPosting
-from scrapers.base import BaseScraper
+from scrapers.base import BaseScraper, parse_relative_time, parse_responses
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +75,7 @@ class KworkScraper(BaseScraper):
                 bm = re.search(r"(\d[\d\s]*₽|\d[\d\s]*руб)", text)
                 if bm:
                     budget = bm.group(1).strip()
+            full_text = f"{title} {description}"
             posts.append(
                 JobPosting(
                     source=self.source,
@@ -83,6 +84,8 @@ class KworkScraper(BaseScraper):
                     description=description,
                     budget=budget,
                     url=url,
+                    published_at=parse_relative_time(full_text),
+                    responses=parse_responses(full_text),
                 )
             )
         return posts

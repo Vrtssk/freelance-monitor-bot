@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 from models.schemas import JobPosting
-from scrapers.base import BaseScraper
+from scrapers.base import BaseScraper, parse_relative_time, parse_responses
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +64,10 @@ class FlRuScraper(BaseScraper):
         if description:
             description = re.sub(r"\s+", " ", description)[:1500]
 
+        full_text = block.get_text(" ", strip=True)
+        published_at = parse_relative_time(full_text)
+        responses = parse_responses(full_text)
+
         return JobPosting(
             source=self.source,
             external_id=external_id,
@@ -71,6 +75,8 @@ class FlRuScraper(BaseScraper):
             description=description,
             budget=budget or None,
             url=url,
+            published_at=published_at,
+            responses=responses,
         )
 
     def _parse_json_ld(self, html: str) -> list[JobPosting]:
@@ -107,6 +113,7 @@ class FlRuScraper(BaseScraper):
                         title=name,
                         description="",
                         url=url,
+                        responses=0,
                     )
                 )
         return posts

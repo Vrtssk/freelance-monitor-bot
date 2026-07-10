@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 from models.schemas import JobPosting
-from scrapers.base import BaseScraper
+from scrapers.base import BaseScraper, parse_relative_time, parse_responses
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,10 @@ class FreelanceRuScraper(BaseScraper):
         cat_el = card.select_one(".task-chip--cat, .task-chip.task-chip--cat")
         category = cat_el.get_text(strip=True) if cat_el else None
 
+        full_text = card.get_text(" ", strip=True)
+        published_at = parse_relative_time(full_text)
+        responses = parse_responses(full_text)
+
         return JobPosting(
             source=self.source,
             external_id=external_id,
@@ -78,4 +82,6 @@ class FreelanceRuScraper(BaseScraper):
             budget=budget,
             url=url,
             category=category,
+            published_at=published_at,
+            responses=responses,
         )

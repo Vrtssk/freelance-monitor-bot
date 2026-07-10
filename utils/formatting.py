@@ -77,6 +77,38 @@ def _topics_label(keys: list[str]) -> str:
     return ", ".join(parts)
 
 
+def _topics_labels_from_csv(csv: str | None) -> str:
+    if not csv:
+        return ""
+    return _topics_label([k for k in csv.split(",") if k])
+
+
+def format_top_list(items: list[tuple]) -> str:
+    """Render the ranked top-N relevant postings as one compact message.
+
+    ``items`` is a list of (SeenPost row, score in [0, 1]).
+    """
+    if not items:
+        return "🔥 Пока нет подходящих объявлений по твоим темам."
+    lines = ["🔥 <b>Топ-5 актуальных объявлений</b>", ""]
+    for i, (row, score) in enumerate(items, 1):
+        src = SOURCES.get(row.source, {})
+        src_emoji = src.get("emoji", "")
+        src_name = src.get("name", row.source)
+        topics = _topics_labels_from_csv(row.matched_topics)
+        budget = row.budget or "Не указан"
+        pct = int(score * 100)
+        title = _escape(row.title or "")
+        lines.append(f"{i}. {topics}")
+        lines.append(f"<b>{title}</b> · 💰 {_escape(budget)} · {src_emoji} {src_name}")
+        lines.append(
+            f"🔗 <a href=\"{row.url}\">открыть на {src_name}</a> · "
+            f"релевантность {pct}%"
+        )
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
 def format_job_notification(post: JobPosting) -> str:
     """Render a JobPosting as a clean, minimal Telegram HTML notification."""
     title = _escape(post.title)

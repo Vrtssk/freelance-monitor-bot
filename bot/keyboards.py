@@ -6,12 +6,13 @@ from config.topics import TOPICS
 
 def main_menu_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
+    kb.button(text="🔥 Топ-5 актуальных", callback_data="menu:top5")
     kb.button(text="📱 Мои темы", callback_data="menu:topics")
     kb.button(text="⚙️ Настройки", callback_data="menu:settings")
     kb.button(text="📊 Статистика", callback_data="menu:stats")
     kb.button(text="🔔 Демо-объявление", callback_data="menu:demo")
     kb.button(text="ℹ️ Помощь", callback_data="menu:help")
-    kb.adjust(2, 2, 1)
+    kb.adjust(1, 2, 2, 1)
     return kb.as_markup()
 
 

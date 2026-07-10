@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -108,6 +108,8 @@ async def mark_post_seen(
     session: AsyncSession,
     post: JobPosting,
     notified: bool = False,
+    complexity: int | None = None,
+    price_value: int | None = None,
 ) -> SeenPost:
     row = SeenPost(
         source=post.source,
@@ -118,11 +120,28 @@ async def mark_post_seen(
         description=(post.description or "")[:2000],
         matched_topics=",".join(post.matched_topics) if post.matched_topics else None,
         notified=notified,
+        published_at=post.published_at,
+        responses=post.responses or 0,
+        complexity=complexity,
+        price_value=price_value,
     )
     session.add(row)
     await session.commit()
     await session.refresh(row)
     return row
+
+
+async def get_top_relevant(session: AsyncSession, telegram_id: int, limit: int = 20) -> list[SeenPost]:
+    """Return stored postings whose topics overlap the user's selected topics.
+
+    Relevance is scored by the caller (per current time) so recency stays fresh.
+    """
+    topics = await get_user_topics(session, telegram_id)
+    if not topics:
+        return []
+    conds = [SeenPost.matched_topics.ilike(f"%{t}%") for t in topics]
+    result = await session.execute(select(SeenPost).where(or_(*conds)))
+    return list(result.scalars().all())
 
 
 async def count_stats(session: AsyncSession) -> dict:

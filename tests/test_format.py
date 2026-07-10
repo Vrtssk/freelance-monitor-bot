@@ -1,6 +1,7 @@
 from models.schemas import JobPosting
 
-from utils.formatting import format_job_notification
+from db.models import SeenPost
+from utils.formatting import format_job_notification, format_top_list
 
 
 def test_format_real_post_contains_fields():
@@ -137,3 +138,26 @@ def test_format_link_is_html_anchor():
     )
     text = format_job_notification(post)
     assert '<a href="https://kwork.ru/projects/3214327">Kwork</a>' in text
+
+
+def test_format_top_list_renders():
+    row = SeenPost(
+        source="kwork",
+        external_id="1",
+        title="Тестовое объявление",
+        budget="10 000 ₽",
+        url="https://kwork.ru/projects/1",
+        matched_topics="chatbots",
+        responses=0,
+        complexity=3,
+        price_value=10000,
+    )
+    text = format_top_list([(row, 0.82)])
+    assert "Топ-5" in text
+    assert "82%" in text
+    assert "🔗" in text
+    assert "kwork.ru/projects/1" in text
+
+
+def test_format_top_list_empty():
+    assert "Пока нет" in format_top_list([])

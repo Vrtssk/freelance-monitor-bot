@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
+from aiogram.types import InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import settings
@@ -17,8 +19,15 @@ from filters.pipeline import HybridFilter
 from models.schemas import JobPosting
 from scrapers import get_all_scrapers
 from utils.formatting import format_job_notification
+from utils.relevance import estimate_complexity, parse_price
 
 logger = logging.getLogger(__name__)
+
+
+def _top5_inline_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🔥 Топ-5 актуальных", callback_data="menu:top5")
+    return kb.as_markup()
 
 
 class MonitorService:
@@ -57,7 +66,13 @@ class MonitorService:
                     logger.info("No active subscribers")
                     for post in all_new:
                         if not await is_post_seen(session, post.source, post.external_id):
-                            await mark_post_seen(session, post, notified=False)
+                            await mark_post_seen(
+                                session,
+                                post,
+                                notified=False,
+                                complexity=estimate_complexity(post.description),
+                                price_value=parse_price(post.budget),
+                            )
                     return summary
 
                 # Union of all user topics for filtering efficiency
@@ -71,16 +86,28 @@ class MonitorService:
                         if already:
                             continue
                         sent = await self._notify_user(user.telegram_id, post)
-                        await mark_post_seen(session, post, notified=sent)
+                        await mark_post_seen(
+                            session,
+                            post,
+                            notified=sent,
+                            complexity=estimate_complexity(post.description),
+                            price_value=parse_price(post.budget),
+                        )
                         if sent:
                             summary["notified"] += 1
 
                 # Mark remaining new posts as seen (no match)
-                for post in all_new:
-                    if not await is_post_seen(session, post.source, post.external_id):
-                        await mark_post_seen(session, post, notified=False)
+                    for post in all_new:
+                        if not await is_post_seen(session, post.source, post.external_id):
+                            await mark_post_seen(
+                                session,
+                                post,
+                                notified=False,
+                                complexity=estimate_complexity(post.description),
+                                price_value=parse_price(post.budget),
+                            )
 
-            return summary
+                    return summary
         except Exception as exc:
             logger.exception("Monitor cycle failed: %s", exc)
             summary["errors"].append(str(exc))
@@ -126,6 +153,7 @@ class MonitorService:
                 text,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=False,
+                reply_markup=_top5_inline_kb(),
             )
             return True
         except Exception as exc:

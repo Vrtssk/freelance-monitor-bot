@@ -14,6 +14,7 @@ class JobPosting(BaseModel):
     budget: Optional[str] = None
     url: str
     published_at: Optional[datetime] = None
+    responses: Optional[int] = None
     category: Optional[str] = None
     matched_topics: list[str] = Field(default_factory=list)
     match_reason: Optional[str] = None
