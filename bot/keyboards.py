@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from config.sources import SCRAPE_SOURCES
 from config.topics import TOPICS
 
 
@@ -48,14 +49,36 @@ def demo_kb() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def settings_kb(paused: bool) -> InlineKeyboardMarkup:
+def settings_kb(paused: bool, active_sources: int = 0, total_sources: int = 0) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     if paused:
         kb.button(text="▶️ Возобновить", callback_data="set:toggle_monitor")
     else:
         kb.button(text="⏸ Пауза", callback_data="set:toggle_monitor")
     kb.button(text="📱 Изменить темы", callback_data="menu:topics")
+    src_label = "📡 Источники"
+    if total_sources:
+        src_label += f" ({active_sources}/{total_sources})"
+    kb.button(text=src_label, callback_data="set:sources")
     kb.button(text="🗑 Сбросить темы", callback_data="set:reset_topics")
     kb.button(text="◀️ Назад", callback_data="menu:main")
-    kb.adjust(1, 1, 1, 1)
+    kb.adjust(1, 1, 1, 1, 1)
+    return kb.as_markup()
+
+
+def sources_kb(disabled: set[str]) -> InlineKeyboardMarkup:
+    """Multi-select keyboard for scrape sources.
+
+    ✅ = enabled (will be parsed), ☐ = disabled (unchecked). Tapping toggles
+    the source via ``src:toggle:<key>``.
+    """
+    kb = InlineKeyboardBuilder()
+    for src in SCRAPE_SOURCES:
+        mark = "✅" if src["key"] not in disabled else "☐"
+        kb.button(
+            text=f"{mark} {src['emoji']} {src['name']}",
+            callback_data=f"src:toggle:{src['key']}",
+        )
+    kb.button(text="◀️ Назад", callback_data="menu:settings")
+    kb.adjust(1, 1, 1, 1, 1)
     return kb.as_markup()

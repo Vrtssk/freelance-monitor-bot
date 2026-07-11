@@ -2,7 +2,8 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from db.models import SeenPost, User, UserTopic
+from config.sources import ALL_SOURCE_KEYS
+from db.models import SeenPost, User, UserDisabledSource, UserTopic
 from filters.vacancy import is_vacancy as detect_vacancy
 from models.schemas import JobPosting
 
@@ -62,6 +63,41 @@ async def clear_user_topics(session: AsyncSession, telegram_id: int) -> None:
     for topic in list(user.topics):
         await session.delete(topic)
     await session.commit()
+
+
+async def get_user_sources(session: AsyncSession, telegram_id: int) -> set[str]:
+    """Enabled scrape sources for a user.
+
+    A source is enabled unless it has a row in ``user_disabled_sources``,
+    so a brand-new user gets every source by default.
+    """
+    result = await session.execute(
+        select(UserDisabledSource.source_key)
+        .join(User)
+        .where(User.telegram_id == telegram_id)
+    )
+    disabled = {row for (row,) in result.all()}
+    return {key for key in ALL_SOURCE_KEYS if key not in disabled}
+
+
+async def toggle_user_source(
+    session: AsyncSession, telegram_id: int, source_key: str
+) -> set[str]:
+    """Flip a single source on/off for the user; return the new enabled set."""
+    user = await get_or_create_user(session, telegram_id)
+    result = await session.execute(
+        select(UserDisabledSource).where(
+            UserDisabledSource.user_id == user.id,
+            UserDisabledSource.source_key == source_key,
+        )
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        await session.delete(existing)
+    else:
+        session.add(UserDisabledSource(user_id=user.id, source_key=source_key))
+    await session.commit()
+    return await get_user_sources(session, telegram_id)
 
 
 async def set_monitoring(

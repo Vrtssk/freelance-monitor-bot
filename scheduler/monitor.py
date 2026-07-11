@@ -9,13 +9,14 @@ from config.settings import settings
 from db.models import ScrapeRun
 from db.repository import (
     get_active_subscribers,
+    get_user_sources,
     is_post_seen,
     mark_post_seen,
 )
 from db.session import async_session_factory
 from filters.pipeline import HybridFilter
 from models.schemas import JobPosting
-from scrapers import get_all_scrapers
+from scrapers import get_scrapers
 from utils.formatting import format_job_notification
 from utils.relevance import estimate_complexity, parse_price
 
@@ -40,10 +41,23 @@ class MonitorService:
         self._running = True
         summary = {"sources": {}, "notified": 0, "errors": []}
         try:
-            scrapers = get_all_scrapers()
-            all_new: list[JobPosting] = []
-
             async with async_session_factory() as session:
+                # Resolve per-user enabled sources first so we only scrape the
+                # union of what anyone actually wants.
+                users = await get_active_subscribers(session)
+                user_sources: dict[int, set[str]] = {}
+                if users:
+                    enabled_union: set[str] = set()
+                    for user in users:
+                        srcs = await get_user_sources(session, user.telegram_id)
+                        user_sources[user.telegram_id] = srcs
+                        enabled_union |= srcs
+                else:
+                    enabled_union = set()
+
+                scrapers = get_scrapers(enabled_union)
+                all_new: list[JobPosting] = []
+
                 for scraper in scrapers:
                     src_stats = await self._scrape_one(session, scraper)
                     summary["sources"][scraper.source] = src_stats
@@ -53,7 +67,6 @@ class MonitorService:
                     logger.info("No new posts this cycle")
                     return summary
 
-                users = await get_active_subscribers(session)
                 if not users:
                     logger.info("No active subscribers")
                     for post in all_new:
@@ -69,10 +82,13 @@ class MonitorService:
 
                 # Union of all user topics for filtering efficiency
                 for user in users:
+                    srcs = user_sources.get(user.telegram_id, set())
                     user_topics = {t.topic_key for t in user.topics}
-                    if not user_topics:
+                    if not user_topics or not srcs:
                         continue
-                    matched = await self.filter.filter_posts(all_new, user_topics)
+                    # Only consider posts from sources this user enabled.
+                    user_new = [p for p in all_new if p.source in srcs]
+                    matched = await self.filter.filter_posts(user_new, user_topics)
                     for post in matched:
                         already = await is_post_seen(session, post.source, post.external_id)
                         if already:

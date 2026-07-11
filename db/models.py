@@ -34,6 +34,9 @@ class User(Base):
     )
 
     topics: Mapped[list["UserTopic"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    disabled_sources: Mapped[list["UserDisabledSource"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserTopic(Base):
@@ -47,6 +50,24 @@ class UserTopic(Base):
     topic_key: Mapped[str] = mapped_column(String(64))
 
     user: Mapped["User"] = relationship(back_populates="topics")
+
+
+class UserDisabledSource(Base):
+    """Scrape source the user turned OFF.
+
+    Absence of a row means the source is enabled (default). Storing the
+    disabled set (rather than enabled) keeps new sources on by default and
+    matches the user's mental model: "uncheck a site to stop parsing it".
+    """
+
+    __tablename__ = "user_disabled_sources"
+    __table_args__ = (UniqueConstraint("user_id", "source_key", name="uq_user_source"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    source_key: Mapped[str] = mapped_column(String(64))
+
+    user: Mapped["User"] = relationship(back_populates="disabled_sources")
 
 
 class SeenPost(Base):
