@@ -7,6 +7,7 @@ from config.topics import TOPICS
 def main_menu_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="🔥 Топ-5 актуальных", callback_data="menu:top5")
+    kb.button(text="🔄 Проверить сейчас", callback_data="menu:refresh")
     kb.button(text="📋 Последние 10", callback_data="menu:recent")
     kb.button(text="📱 Мои темы", callback_data="menu:topics")
     kb.button(text="⚙️ Настройки", callback_data="menu:settings")
@@ -16,7 +17,7 @@ def main_menu_kb() -> InlineKeyboardMarkup:
     # Open the local web board. Sent as a clickable text link (callback), not a
     # URL button — Telegram rejects "localhost"/private URLs in inline URL buttons.
     kb.button(text="🌐 Все объявления (сайт)", callback_data="menu:board")
-    kb.adjust(1, 1, 2, 2, 1)
+    kb.adjust(1, 1, 1, 2, 2, 1)
     return kb.as_markup()
 
 

@@ -12,19 +12,23 @@ from bot.keyboards import (
 from config.topics import TOPICS
 
 
-def test_main_menu_has_8_buttons():
+def test_main_menu_has_9_buttons():
     kb = main_menu_kb()
     assert kb.inline_keyboard is not None
     total = sum(len(row) for row in kb.inline_keyboard)
-    assert total == 8
+    assert total == 9
     labels = " ".join(b.text for row in kb.inline_keyboard for b in row)
     assert "Топ-5" in labels
     assert "Последние 10" in labels
+    assert "Проверить сейчас" in labels
     # The web-board button is a callback that sends a clickable text link
     # (URL buttons can't use localhost/private hosts).
     board_btn = [b for row in kb.inline_keyboard for b in row if b.text.startswith("🌐")]
     assert board_btn, "web board button missing"
     assert board_btn[0].callback_data == "menu:board"
+    refresh_btn = [b for row in kb.inline_keyboard for b in row if b.text.startswith("🔄")]
+    assert refresh_btn, "manual refresh button missing"
+    assert refresh_btn[0].callback_data == "menu:refresh"
 
 
 def test_topics_kb_includes_all_topics_plus_done():
