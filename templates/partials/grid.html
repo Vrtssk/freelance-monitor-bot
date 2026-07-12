@@ -1,0 +1,36 @@
+{# Grid of job cards. Reused by full pages and HTMX partial swaps.
+   Expects: rows (list[SeenPost]), topics_map (key -> "emoji name"), score_map optional. #}
+<div class="grid" id="grid">
+  {% if not rows %}
+    <div class="empty">{% if empty_text %}{{ empty_text }}{% else %}Пока нет сохранённых объявлений.{% endif %}</div>
+  {% endif %}
+  {% for r in rows %}
+    {% set topics = r.matched_topics.split(",") if r.matched_topics else [] %}
+    {% set score = scores.get(r.id) if scores is defined and scores is not none else none %}
+    <article class="card" data-src="{{ r.source }}">
+      {% if score is not none %}
+        <span class="badge score">[{{ (score * 100) | int }}%]</span>
+      {% elif r.is_vacancy %}
+        <span class="badge vac">вакансия</span>
+      {% elif r.notified %}
+        <span class="badge notif">прислано</span>
+      {% endif %}
+      <div class="top">
+        <span class="src"><span class="em">{{ sources[r.source].emoji if sources[r.source] is defined else "•" }}</span>{{ sources[r.source].name if sources[r.source] is defined else r.source }}</span>
+        <span class="date">{{ r.seen_at.strftime("%d.%m.%Y %H:%M") if r.seen_at else "" }}</span>
+      </div>
+      <h3 class="title"><a href="{{ r.url or '#' }}" target="_blank" rel="noopener">{{ r.title or "Без названия" }}</a></h3>
+      <div class="meta"><span class="budget">💰 {{ r.budget or "Не указан" }}</span></div>
+      {% if topics %}
+        <div class="chips">
+          {% for t in topics %}{% if t %}
+            <span class="chip">{{ topics_map.get(t, t) }}</span>
+          {% endif %}{% endfor %}
+        </div>
+      {% endif %}
+      {% if r.description %}
+        <div class="desc">{{ (r.description | replace("\n"," ") | truncate(320, True, "…")) }}</div>
+      {% endif %}
+    </article>
+  {% endfor %}
+</div>

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from datetime import datetime, timezone
 
 from config.settings import settings
-from api.board import render_jobs_page, render_top_page
+from api.board import render_grid_partial, render_jobs_page, render_top_page
 from db.repository import count_stats, get_all_posts, get_relevant_posts
 from db.session import async_session_factory, init_db
 from scrapers import get_all_scrapers
@@ -54,15 +54,21 @@ async def health():
 
 
 @app.get("/", response_class=HTMLResponse)
-async def board(request: Request):
-    """Web board: all collected postings, newest first."""
+async def board(request: Request, partial: bool = False, src: str = None):
+    """Web board: all collected postings, newest first.
+
+    ``?partial=1`` returns only the card grid (for HTMX swaps); ``src`` filters
+    by exchange without a full page reload.
+    """
     async with async_session_factory() as session:
         rows = await get_all_posts(session)
+    if partial:
+        return HTMLResponse(render_grid_partial(rows, src=src, empty_text="Пока нет сохранённых объявлений."))
     return HTMLResponse(render_jobs_page(rows, base_url=str(request.base_url)))
 
 
 @app.get("/top", response_class=HTMLResponse)
-async def board_top(request: Request, limit: int = 10):
+async def board_top(request: Request, limit: int = 10, partial: bool = False, src: str = None):
     """Web board: top-N most relevant (non-vacancy) postings."""
     async with async_session_factory() as session:
         rows = await get_relevant_posts(session)
@@ -80,7 +86,14 @@ async def board_top(request: Request, limit: int = 10):
         for row in rows
     ]
     scored.sort(key=lambda x: x[1], reverse=True)
-    return HTMLResponse(render_top_page(scored[:limit], base_url=str(request.base_url)))
+    scored = scored[:limit]
+    if partial:
+        rows_top = [row for row, _ in scored]
+        scores = {row.id: score for row, score in scored}
+        return HTMLResponse(
+            render_grid_partial(rows_top, src=src, scores=scores, empty_text="Пока нет подходящих объявлений.")
+        )
+    return HTMLResponse(render_top_page(scored, base_url=str(request.base_url)))
 
 
 @app.get("/stats")
