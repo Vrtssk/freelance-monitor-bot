@@ -11,8 +11,19 @@ venv/
 env/
 ENV/
 
-# Playwright
+# Playwright (browser binaries + MCP debug logs)
 .playwright/
+.playwright-mcp/
+
+# Local AI-agent / skill configs (dev environment, not product)
+.agents/
+.claude/
+skills-lock.json
+
+# Screenshots / logs / local backups (dev artifacts)
+*.png
+*.log
+.env.bak
 
 # Data / DB
 *.db
