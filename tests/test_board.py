@@ -56,7 +56,7 @@ def test_render_top_page_shows_score_badge():
     assert "score-wrap" in html
     assert "Тестовое объявление" in html
     # nav marks the top page active
-    assert 'navlink active' in html
+    assert 'side-link active' in html
 
 
 def test_render_top_page_empty():

@@ -1,5 +1,5 @@
 {# Shared job card grid. Rows arrive from the server; HTMX swaps this whole element. #}
-<div class="grid" id="grid">
+<div class="grid masonry" id="grid">
   {% if not rows %}<div class="empty">{% if empty_text %}{{ empty_text }}{% else %}Пока нет сохраненных объявлений. Следующая проверка начнется автоматически.{% endif %}</div>{% endif %}
   {% for r in rows %}
     {% set topics = r.matched_topics.split(",") if r.matched_topics else [] %}
@@ -9,7 +9,7 @@
     <article class="card {% if r.is_vacancy %}vacancy-card{% endif %}" data-src="{{ r.source }}">
       {% if score is not none %}<span class="rank">#{{ loop.index }}</span>{% endif %}
       <div class="top">
-        <span class="src" style="--source-color:{{ source_colors.get(r.source, '#4f8cff') }}"><i class="source-dot"></i>{{ sources[r.source].name if sources[r.source] is defined else r.source }}</span>
+        <span class="src" style="--source-color:{{ source_colors.get(r.source, '#4f8cff') }}"><i class="source-dot">{{ 'FL' if r.source == 'fl_ru' else ('FR' if r.source == 'freelance_ru' else ('W' if r.source == 'weblancer' else 'K')) }}</i>{{ sources[r.source].name if sources[r.source] is defined else r.source }}</span>
         {% if score is not none %}<span class="score-wrap" aria-label="Релевантность {{ score_percent }} процентов"><svg viewBox="0 0 42 42" width="42" height="42"><circle class="track" cx="21" cy="21" r="17"/><circle cx="21" cy="21" r="17" stroke="{{ score_color }}" stroke-dasharray="106.8" stroke-dashoffset="{{ 106.8 - 106.8 * score }}" stroke-linecap="round"/></svg><span class="score-value">{{ score_percent }}%</span></span>{% elif r.is_vacancy %}<span class="badge vac">Вакансия</span>{% elif r.notified %}<span class="badge notif">Отправлено</span>{% else %}<span class="date">{{ r.seen_at.strftime('%d.%m %H:%M') if r.seen_at else '' }}</span>{% endif %}
       </div>
       <h3 class="title"><a href="{{ r.url or '#' }}" target="_blank" rel="noopener">{{ r.title or 'Без названия' }}</a></h3>

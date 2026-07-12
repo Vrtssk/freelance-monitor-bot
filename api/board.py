@@ -40,6 +40,7 @@ _EMPTY_METRICS = {
     "fresh_24": 0,
     "avg_price": None,
     "sources_enabled": 0,
+    "by_source": {},
     "fresh_series": [],
 }
 

@@ -277,6 +277,10 @@ async def board_metrics(session: AsyncSession, hours: int = 24) -> dict:
     sources_enabled = await session.scalar(
         select(func.count(func.distinct(SeenPost.source)))
     ) or 0
+    source_rows = await session.execute(
+        select(SeenPost.source, func.count()).group_by(SeenPost.source)
+    )
+    by_source = {source: int(count) for source, count in source_rows.all()}
 
     rows = await session.execute(
         select(SeenPost.seen_at)
@@ -301,5 +305,6 @@ async def board_metrics(session: AsyncSession, hours: int = 24) -> dict:
         "fresh_24": int(fresh_24),
         "avg_price": avg_price,
         "sources_enabled": int(sources_enabled),
+        "by_source": by_source,
         "fresh_series": fresh_series,
     }
