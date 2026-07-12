@@ -28,8 +28,11 @@ human-readable way:
    public function/class summarizing **what** it does and **why**.
 2. For any non-trivial logic, design decision, or architecture choice, create or
    update a Markdown (`.md`) file under the relevant directory explaining it in
-   Russian or English. Examples: `docs/scrapers.md`, `docs/filters.md`.
+   Russian or English.
 3. README.md must stay up to date with how to run, configure, and extend the bot.
+4. Canonical docs are `docs/architecture.md`, `docs/operations.md`,
+   `docs/filtering-and-ranking.md`, and `docs/web-and-api.md`. Update one of
+   these instead of creating overlapping feature/design documents.
 
 ## Testing rule (MANDATORY)
 
@@ -62,56 +65,40 @@ modifying any integration code (even for well-known libraries). Steps:
 
 - Python 3.12 (Docker: `python:3.12-slim`), works on 3.11+
 - `aiogram` 3.x — Telegram bot
-- `fastapi` + `uvicorn` — HTTP API (health, stats, manual scrape)
+- `fastapi` + `uvicorn` + Jinja2/HTMX/Alpine — HTTP API and web board
 - `sqlalchemy` 2.x async + `asyncpg` — PostgreSQL storage
 - `httpx` + `beautifulsoup4` — server-rendered scrapers (FL.ru, Freelance.ru)
 - `playwright` (headless Chromium) — JS-rendered scrapers (Weblancer.net, Kwork.ru)
 - `openai` (OpenAI-compatible) — LLM classification via Groq (was OpenRouter)
 - `apscheduler` — periodic scrape cycle
 - `docker` / `docker-compose` — postgres + bot + api services
-- Filtering: **hybrid** — keyword pre-filter then LLM classification
+- Filtering: guards → keyword pre-filter → LLM classification/fallback
 
 ## Architecture
 
 ```
-api/        FastAPI app (health, /stats, POST /scrape/run, /scrapers/{src}/test)
+api/        FastAPI JSON API + server-rendered board context
 bot/        aiogram bot: handlers, keyboards, main entry (db + scheduler + monitor)
 config/     settings (pydantic), topics (keywords, sources, demo)
-db/         sqlalchemy models, async session, repository (users/topics/posts/stats)
-filters/    keywords.py, llm.py (OpenAI-compatible LLM: Groq), pipeline.py (hybrid)
+db/         SQLAlchemy models, async session, repository
+filters/    vacancy/off-topic guards, keywords, LLM, hybrid pipeline
 models/     JobPosting schema (normalized posting)
 scrapers/   base + fl_ru, freelance_ru, weblancer, kwork
 scheduler/  monitor.py (scrape→filter→notify), manager.py (APScheduler)
-utils/      formatting.py (Telegram HTML notification)
+templates/  Jinja pages for board, top, stats and HTMX grid partial
+utils/      Telegram formatting and relevance ranking
 ```
 
-Flow: APScheduler → `monitor.run_cycle()` → scrapers fetch → `is_post_seen`
-skip → `HybridFilter.filter_posts` (keywords → LLM) → notify user via bot
-→ `mark_post_seen(notified=...)`.
+Flow: APScheduler → `monitor.run_cycle()` → selected scrapers → global seen skip
+→ per-user sources/topics → guards → keywords → LLM/fallback → Telegram notify
+→ global `seen_posts` storage.
 
-See `docs/architecture.md` for details.
+See `docs/architecture.md` for process/data-model details. Routes and security
+caveats are in `docs/web-and-api.md`; do not duplicate them here.
 
-## Scraping targets
+## Canonical docs
 
-| Site | Render | Scraper approach |
-|------|--------|-----------------|
-| FL.ru | server | httpx + BeautifulSoup, JSON-LD ItemList + `.b-post` |
-| Freelance.ru | server | httpx + BeautifulSoup, `<article class="task-card">` |
-| Weblancer.net | Next.js JS | Playwright headless, category `veb-programmirovanie-31` |
-| Kwork.ru | JS | Playwright headless (+ API fallback) |
-| Хабр Фриланс | — | CLOSED (410), excluded |
-
-## LLM classification
-
-OpenAI-compatible endpoint (Groq). Configured via `.env`:
-- `LLM_BASE_URL=https://api.groq.com/openai/v1`
-- `LLM_MODEL=llama-3.1-8b-instant`
-- `LLM_API_KEY=gsk-...`
-
-## Topics (user-selected, IT / Разработка)
-
-- 🖥 Front-end
-- 🔨 Верстка сайтов
-- 🕷 Парсинг и сбор данных
-- ⚙️ Скрипты и автоматизация
-- 🤖 Чат-боты
+- `docs/architecture.md` — processes, data model, multi-user semantics.
+- `docs/operations.md` — setup, environment, testing, deployment/security.
+- `docs/filtering-and-ranking.md` — topic keys, pipeline, LLM, relevance.
+- `docs/web-and-api.md` — HTML pages, API routes and implemented UI behavior.

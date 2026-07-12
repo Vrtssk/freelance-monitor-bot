@@ -42,6 +42,8 @@ db.sqlite3
 .ruff_cache/
 .hypothesis/
 
-# Local-only dev docs (kept on disk, not pushed to GitHub)
+# Historical/generated design artifacts are local; canonical docs/ are tracked.
 DESIGN.md
-docs/
+docs/reference.md
+docs/reference.png
+docs/tz-design-site.md
