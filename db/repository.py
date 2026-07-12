@@ -1,4 +1,4 @@
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -241,3 +241,65 @@ async def count_stats(session: AsyncSession) -> dict:
     )
     by_source = {src: cnt for src, cnt in by_source_rows.all()}
     return {"total": total, "notified": notified, "by_source": by_source}
+
+
+async def board_metrics(session: AsyncSession, hours: int = 24) -> dict:
+    """Aggregate dashboard stats + hourly series for sparklines.
+
+    Web board only needs the public/global view (no per-user topics or sources).
+    Returns counts, average price, and a list of "new posts per hour" for the
+    last ``hours`` hours (oldest first). Missing hours are zero-filled so the
+    chart has a stable x-axis.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(hours=hours)
+
+    total = await session.scalar(select(func.count()).select_from(SeenPost)) or 0
+    notified = await session.scalar(
+        select(func.count()).select_from(SeenPost).where(SeenPost.notified.is_(True))
+    ) or 0
+    vacancies = await session.scalar(
+        select(func.count()).select_from(SeenPost).where(SeenPost.is_vacancy.is_(True))
+    ) or 0
+    fresh_24 = await session.scalar(
+        select(func.count())
+        .select_from(SeenPost)
+        .where(SeenPost.seen_at >= since)
+    ) or 0
+
+    avg_price = await session.scalar(
+        select(func.avg(SeenPost.price_value)).where(SeenPost.price_value.is_not(None))
+    )
+    avg_price = int(round(avg_price)) if avg_price is not None else None
+
+    sources_enabled = await session.scalar(
+        select(func.count(func.distinct(SeenPost.source)))
+    ) or 0
+
+    rows = await session.execute(
+        select(SeenPost.seen_at)
+        .where(SeenPost.seen_at >= since)
+        .order_by(SeenPost.seen_at.asc())
+    )
+    counts: dict[int, int] = {}
+    for (ts,) in rows.all():
+        if ts is None:
+            continue
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        hour = int((ts - since).total_seconds() // 3600)
+        if 0 <= hour < hours:
+            counts[hour] = counts.get(hour, 0) + 1
+    fresh_series = [counts.get(h, 0) for h in range(hours)]
+
+    return {
+        "total": int(total),
+        "notified": int(notified),
+        "vacancies": int(vacancies),
+        "fresh_24": int(fresh_24),
+        "avg_price": avg_price,
+        "sources_enabled": int(sources_enabled),
+        "fresh_series": fresh_series,
+    }

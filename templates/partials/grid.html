@@ -1,36 +1,22 @@
-{# Grid of job cards. Reused by full pages and HTMX partial swaps.
-   Expects: rows (list[SeenPost]), topics_map (key -> "emoji name"), score_map optional. #}
+{# Shared job card grid. Rows arrive from the server; HTMX swaps this whole element. #}
 <div class="grid" id="grid">
-  {% if not rows %}
-    <div class="empty">{% if empty_text %}{{ empty_text }}{% else %}Пока нет сохранённых объявлений.{% endif %}</div>
-  {% endif %}
+  {% if not rows %}<div class="empty">{% if empty_text %}{{ empty_text }}{% else %}Пока нет сохраненных объявлений. Следующая проверка начнется автоматически.{% endif %}</div>{% endif %}
   {% for r in rows %}
     {% set topics = r.matched_topics.split(",") if r.matched_topics else [] %}
     {% set score = scores.get(r.id) if scores is defined and scores is not none else none %}
-    <article class="card" data-src="{{ r.source }}">
-      {% if score is not none %}
-        <span class="badge score">[{{ (score * 100) | int }}%]</span>
-      {% elif r.is_vacancy %}
-        <span class="badge vac">вакансия</span>
-      {% elif r.notified %}
-        <span class="badge notif">прислано</span>
-      {% endif %}
+    {% set score_percent = (score * 100)|int if score is not none else 0 %}
+    {% set score_color = '#10b981' if score is not none and score >= 0.8 else ('#4f8cff' if score is not none and score >= 0.5 else '#f59e0b') %}
+    <article class="card {% if r.is_vacancy %}vacancy-card{% endif %}" data-src="{{ r.source }}">
+      {% if score is not none %}<span class="rank">#{{ loop.index }}</span>{% endif %}
       <div class="top">
-        <span class="src"><span class="em">{{ sources[r.source].emoji if sources[r.source] is defined else "•" }}</span>{{ sources[r.source].name if sources[r.source] is defined else r.source }}</span>
-        <span class="date">{{ r.seen_at.strftime("%d.%m.%Y %H:%M") if r.seen_at else "" }}</span>
+        <span class="src" style="--source-color:{{ source_colors.get(r.source, '#4f8cff') }}"><i class="source-dot"></i>{{ sources[r.source].name if sources[r.source] is defined else r.source }}</span>
+        {% if score is not none %}<span class="score-wrap" aria-label="Релевантность {{ score_percent }} процентов"><svg viewBox="0 0 42 42" width="42" height="42"><circle class="track" cx="21" cy="21" r="17"/><circle cx="21" cy="21" r="17" stroke="{{ score_color }}" stroke-dasharray="106.8" stroke-dashoffset="{{ 106.8 - 106.8 * score }}" stroke-linecap="round"/></svg><span class="score-value">{{ score_percent }}%</span></span>{% elif r.is_vacancy %}<span class="badge vac">Вакансия</span>{% elif r.notified %}<span class="badge notif">Отправлено</span>{% else %}<span class="date">{{ r.seen_at.strftime('%d.%m %H:%M') if r.seen_at else '' }}</span>{% endif %}
       </div>
-      <h3 class="title"><a href="{{ r.url or '#' }}" target="_blank" rel="noopener">{{ r.title or "Без названия" }}</a></h3>
-      <div class="meta"><span class="budget">💰 {{ r.budget or "Не указан" }}</span></div>
-      {% if topics %}
-        <div class="chips">
-          {% for t in topics %}{% if t %}
-            <span class="chip">{{ topics_map.get(t, t) }}</span>
-          {% endif %}{% endfor %}
-        </div>
-      {% endif %}
-      {% if r.description %}
-        <div class="desc">{{ (r.description | replace("\n"," ") | truncate(320, True, "…")) }}</div>
-      {% endif %}
+      <h3 class="title"><a href="{{ r.url or '#' }}" target="_blank" rel="noopener">{{ r.title or 'Без названия' }}</a></h3>
+      {% if r.description %}<p class="desc">{{ r.description|replace('\n',' ')|truncate(280, True, '...') }}</p>{% endif %}
+      <div class="chips">{% for t in topics %}{% if t %}<span class="chip" style="--topic-color:{{ topic_colors.get(t, '#4f8cff') }}">{{ topics_map.get(t, t) }}</span>{% endif %}{% endfor %}</div>
+      <div class="card-bottom"><div><strong class="budget">{{ r.budget or 'Бюджет не указан' }}</strong><span class="responses">{{ r.responses or 0 }} откликов <span aria-hidden="true">&middot;</span> {{ r.seen_at.strftime('%d.%m.%Y') if r.seen_at else 'дата не указана' }}</span></div>{% if score is none and r.seen_at %}<span class="date">{{ r.seen_at.strftime('%H:%M') }}</span>{% endif %}</div>
+      <div class="card-actions"><a class="card-action primary" href="{{ r.url or '#' }}" target="_blank" rel="noopener">Открыть</a><a class="card-action" href="{{ sources[r.source].url if r.source in sources else r.url or '#' }}" target="_blank" rel="noopener">Источник</a></div>
     </article>
   {% endfor %}
 </div>

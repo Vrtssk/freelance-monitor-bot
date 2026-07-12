@@ -1,29 +1,10 @@
 {% extends "base.html" %}
-
-{% block title %}Фриланс-монитор · топ релевантных{% endblock %}
-
-{% block hero %}
-  <section class="bg-surface-dark text-canvas rounded-none p-8 md:p-14 mb-8">
-<pre class="text-canvas text-sm leading-relaxed overflow-x-auto m-0"> ___ ___ ___    ___ _ _    ___ ___ _ _ _ ___ ___
-| __/ _ \ __|  |_ _| | |  |_ _| __| | | | _ \_  )
-| _| (_) | _|    | || |_|   | || _|| _ | |   / / /
-|___\___/___|   |___|____|  |___|___|___|_|_|_\___|</pre>
-    <div class="bg-surface-dark-elevated text-canvas rounded-sm px-3 py-2 mt-4 text-sm">
-      ▌ Rank · релевантность = отклики · свежесть · сложность
-    </div>
-    <div class="text-ash text-xs mt-3">[+] свежие и простые заказы&nbsp;&nbsp;[-] вакансии исключены</div>
-  </section>
-{% endblock %}
-
+{% block title %}Freelance Monitor - топ заказов{% endblock %}
 {% block content %}
-  <div x-data="{ src: 'all' }">
-    <div class="mb-3">
-      <div class="text-ink font-bold text-lg">🔥 Топ-10 релевантных</div>
-      <div class="text-mute text-sm">Самые релевантные заказы: мало откликов, свежие, проще · без вакансий</div>
-    </div>
-
-    <div x-init="setInterval(() => htmx.ajax('GET', '/?partial=1&top=1&src=' + src, {target: '#grid', swap: 'innerHTML'}), 90000)">
-      {% include "partials/grid.html" %}
-    </div>
+  <section class="hero"><div class="hero-copy"><div class="eyebrow"><i></i> AI-ranked подборка</div><h1>Самые интересные<br>проекты прямо сейчас</h1><p>Рейтинг учитывает число откликов, свежесть публикации, сложность и бюджет. Вакансии исключены из выборки.</p></div><div class="hero-signals"><div class="signal"><strong>Меньше конкуренции</strong><span>Отклики имеют самый высокий вес в рейтинге</span></div><div class="signal"><strong>Свежие проекты</strong><span>Чем раньше отклик, тем выше шанс получить заказ</span></div><div class="signal"><strong>Только фриланс</strong><span>Вакансии и штатный найм не участвуют</span></div><div class="signal"><strong>Обновляемый score</strong><span>Свежесть пересчитывается при каждом открытии</span></div></div></section>
+  <div x-data="{ src: 'all' }" x-init="setInterval(() => htmx.ajax('GET', '/top?partial=1&src=' + src, {target:'#grid', swap:'outerHTML'}), 90000)">
+    <div class="section-head"><div><h2>Топ-10 релевантных</h2><p>Лучшие точки входа в новые заказы</p></div><p>{{ rows|length }} проектов в подборке</p></div>
+    <div class="filters-panel"><div class="filters"><button class="fbtn active" :class="src === 'all' && 'active'" @click="src='all'; htmx.ajax('GET','/top?partial=1',{target:'#grid',swap:'outerHTML'})">Все биржи</button>{% for key, s in sources.items() %}<button class="fbtn" style="--filter-color:{{ source_colors[key] }}" :class="src === '{{ key }}' && 'active'" @click="src='{{ key }}'; htmx.ajax('GET','/top?partial=1&src={{ key }}',{target:'#grid',swap:'outerHTML'})">{{ s.name }}</button>{% endfor %}</div><span class="listing-count">Чем выше score, тем лучше момент</span></div>
+    <div style="height:15px"></div>{% include "partials/grid.html" %}
   </div>
 {% endblock %}

@@ -24,13 +24,13 @@ def test_render_contains_title_and_link():
     assert "<!DOCTYPE html>" in html
     assert "Тестовое объявление" in html
     assert "https://fl.ru/projects/1" in html
-    assert "💰 10 000 ₽" in html
-    assert "прислано" in html  # notified badge
+    assert "10 000 ₽" in html
+    assert "Отправлено" in html  # notified badge
 
 
 def test_render_vacancy_badge():
     html = render_jobs_page([_row(is_vacancy=True, notified=False)])
-    assert "вакансия" in html
+    assert "Вакансия" in html
 
 
 def test_render_empty():
@@ -47,16 +47,16 @@ def test_render_has_nav_links():
     html = render_jobs_page([_row()])
     assert 'href="/"' in html
     assert 'href="/top"' in html
-    assert "Топ-10 релевантных" in html
+    assert "Топ заказов" in html
 
 
 def test_render_top_page_shows_score_badge():
     html = render_top_page([(_row(), 0.87)])
     assert "87%" in html
-    assert "badge score" in html
+    assert "score-wrap" in html
     assert "Тестовое объявление" in html
     # nav marks the top page active
-    assert 'class="navlink active" href="/top"' in html
+    assert 'navlink active' in html
 
 
 def test_render_top_page_empty():

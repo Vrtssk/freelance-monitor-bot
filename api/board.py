@@ -1,8 +1,8 @@
 """Server-rendered HTML board of collected job postings.
 
-Pages are rendered with Jinja2 templates (cream / monospace design system from
-DESIGN.md). HTMX swaps the card grid in place and polls for fresh posts; Alpine.js
-holds the active-source filter state locally. The same ``partials/grid.html`` is
+Pages are rendered with Jinja2 templates (тёмный дашборд из ``docs/site-design.md``).
+HTMX swaps the card grid in place and polls for fresh posts; Alpine.js holds
+the active-source filter state locally. The same ``partials/grid.html`` is
 used for the full page and for HTMX partial responses (``?partial=1``).
 """
 from typing import Optional
@@ -17,6 +17,32 @@ _TOPICS_MAP = {
     key: f"{t['emoji']} {t['name']}" for key, t in TOPIC_BY_KEY.items()
 }
 
+# Цвета источников и тем задаются здесь, чтобы шаблоны оставались чистыми.
+_SOURCE_COLORS = {
+    "fl_ru": "#2f81f7",
+    "freelance_ru": "#00e676",
+    "weblancer": "#1f9d9d",
+    "kwork": "#ff9800",
+}
+
+_TOPIC_COLORS = {
+    "frontend":    "#2f81f7",
+    "markup":      "#ff9800",
+    "parsing":     "#8957e5",
+    "automation":  "#1f9d9d",
+    "chatbots":    "#00e676",
+}
+
+_EMPTY_METRICS = {
+    "total": 0,
+    "notified": 0,
+    "vacancies": 0,
+    "fresh_24": 0,
+    "avg_price": None,
+    "sources_enabled": 0,
+    "fresh_series": [],
+}
+
 
 def _filter_by_source(rows, src: Optional[str]) -> list:
     if not src or src == "all":
@@ -24,20 +50,24 @@ def _filter_by_source(rows, src: Optional[str]) -> list:
     return [r for r in rows if r.source == src]
 
 
-def render_jobs_page(rows: list, base_url: str = "") -> str:
+def render_jobs_page(rows: list, metrics: Optional[dict] = None, base_url: str = "") -> str:
+    """`GET /` — все объявления + метрики для дашборда."""
     return templates.get_template("board.html").render(
         active="all",
         rows=rows,
         sources=SOURCES,
+        source_colors=_SOURCE_COLORS,
+        topic_colors=_TOPIC_COLORS,
         topics_map=_TOPICS_MAP,
+        metrics=metrics or _EMPTY_METRICS,
     )
 
 
-def render_top_page(scored: list, base_url: str = "") -> str:
-    """Render the top-N relevant postings.
+def render_top_page(scored: list, metrics: Optional[dict] = None, base_url: str = "") -> str:
+    """`GET /top` — топ-N самых релевантных объявлений.
 
-    ``scored`` is a list of ``(row, score)`` tuples. The tests may pass bare
-    rows (no score), so we tolerate both shapes.
+    ``scored`` is a list of ``(row, score)`` tuples. The tests may pass bare rows
+    (no score), so we tolerate both shapes.
     """
     items: list[tuple] = []
     for item in scored:
@@ -53,7 +83,10 @@ def render_top_page(scored: list, base_url: str = "") -> str:
         rows=rows,
         scores=scores,
         sources=SOURCES,
+        source_colors=_SOURCE_COLORS,
+        topic_colors=_TOPIC_COLORS,
         topics_map=_TOPICS_MAP,
+        metrics=metrics or _EMPTY_METRICS,
         empty_text="Пока нет подходящих объявлений.",
     )
 
@@ -71,6 +104,8 @@ def render_grid_partial(
         rows=rows,
         scores=scores,
         sources=SOURCES,
+        source_colors=_SOURCE_COLORS,
+        topic_colors=_TOPIC_COLORS,
         topics_map=_TOPICS_MAP,
         empty_text=empty_text,
     )

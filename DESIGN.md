@@ -1,7 +1,12 @@
 ---
 version: alpha
 name: OpenCode-design-analysis
+status: archived (superseded by docs/site-design.md — тёмный дашборд)
 description: |
+  Историческая спецификация cream/monospace-темы (OpenCode-style). В 2026
+  веб-доска перешла на тёмный дашборд (см. docs/site-design.md). Этот файл
+  оставлен для справки; не использовать как canonical reference для доски.
+
   A terminal-native marketing system rendered entirely in Berkeley Mono — every word on the page, from the hero headline down to the footer fine print, is monospaced. The page itself reads like a manpage or a static-site README: warm cream canvas (`#fdfcfc`), nearly-black ink (`#201d1d`), 4px-radius rectangles for the few interactive elements, and bracketed `[+]`/`[-]` ASCII markers used as bullets. The brand's only "visual moment" is a single dark hero card that mocks up the OpenCode TUI itself — black background, monospaced terminal output, ASCII pipe characters, and a wordmark rendered as block-pixel ASCII. Every section sits as a hairline-bordered text block on the cream canvas with no shadows, no gradients, no decorative imagery, and no non-monospaced character anywhere in the system.
 
 colors:

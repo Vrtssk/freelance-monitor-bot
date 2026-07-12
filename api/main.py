@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from config.settings import settings
 from api.board import render_grid_partial, render_jobs_page, render_top_page
-from db.repository import count_stats, get_all_posts, get_relevant_posts
+from db.repository import board_metrics, count_stats, get_all_posts, get_relevant_posts
 from db.session import async_session_factory, init_db
 from scrapers import get_all_scrapers
 from scheduler.monitor import monitor_service
@@ -62,9 +62,12 @@ async def board(request: Request, partial: bool = False, src: str = None):
     """
     async with async_session_factory() as session:
         rows = await get_all_posts(session)
+        metrics = await board_metrics(session)
     if partial:
-        return HTMLResponse(render_grid_partial(rows, src=src, empty_text="Пока нет сохранённых объявлений."))
-    return HTMLResponse(render_jobs_page(rows, base_url=str(request.base_url)))
+        return HTMLResponse(
+            render_grid_partial(rows, src=src, empty_text="Пока нет сохранённых объявлений.")
+        )
+    return HTMLResponse(render_jobs_page(rows, metrics=metrics, base_url=str(request.base_url)))
 
 
 @app.get("/top", response_class=HTMLResponse)
@@ -72,6 +75,7 @@ async def board_top(request: Request, limit: int = 10, partial: bool = False, sr
     """Web board: top-N most relevant (non-vacancy) postings."""
     async with async_session_factory() as session:
         rows = await get_relevant_posts(session)
+        metrics = await board_metrics(session)
     now = datetime.now(timezone.utc)
     scored = [
         (
@@ -93,7 +97,7 @@ async def board_top(request: Request, limit: int = 10, partial: bool = False, sr
         return HTMLResponse(
             render_grid_partial(rows_top, src=src, scores=scores, empty_text="Пока нет подходящих объявлений.")
         )
-    return HTMLResponse(render_top_page(scored, base_url=str(request.base_url)))
+    return HTMLResponse(render_top_page(scored, metrics=metrics, base_url=str(request.base_url)))
 
 
 @app.get("/stats")
