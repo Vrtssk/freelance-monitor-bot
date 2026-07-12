@@ -1,6 +1,6 @@
 from db.models import SeenPost
 
-from api.board import render_jobs_page, render_top_page
+from api.board import render_jobs_page, render_stats_page, render_top_page
 
 
 def _row(**kw) -> SeenPost:
@@ -62,3 +62,21 @@ def test_render_top_page_shows_score_badge():
 def test_render_top_page_empty():
     html = render_top_page([])
     assert "Пока нет подходящих" in html
+
+
+def test_render_stats_page_is_html_dashboard():
+    metrics = {
+        "total": 156,
+        "notified": 95,
+        "vacancies": 12,
+        "fresh_24": 8,
+        "avg_price": 25000,
+        "sources_enabled": 4,
+        "by_source": {"fl_ru": 52},
+        "fresh_series": [],
+    }
+    html = render_stats_page(metrics)
+    assert "<!DOCTYPE html>" in html
+    assert "Статистика" in html
+    assert "25 000 ₽" in html
+    assert "FL.ru" in html

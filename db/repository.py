@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from config.sources import ALL_SOURCE_KEYS
-from db.models import SeenPost, User, UserDisabledSource, UserTopic
+from db.models import ScrapeRun, SeenPost, User, UserDisabledSource, UserTopic
 from filters.vacancy import is_vacancy as detect_vacancy
 from models.schemas import JobPosting
 
@@ -308,3 +308,8 @@ async def board_metrics(session: AsyncSession, hours: int = 24) -> dict:
         "by_source": by_source,
         "fresh_series": fresh_series,
     }
+
+
+async def latest_scrape_finished_at(session: AsyncSession):
+    """Return the most recent completed scrape timestamp for dashboard status."""
+    return await session.scalar(select(func.max(ScrapeRun.finished_at)))

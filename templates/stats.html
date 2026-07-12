@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Freelance Monitor - статистика{% endblock %}
+{% block content %}
+  <section class="hero" style="grid-template-columns:minmax(280px,.7fr) minmax(0,1.6fr)">
+    <div class="hero-copy"><div class="eyebrow"><i></i> Аналитика мониторинга</div><h1>Статистика<span class="gradient-title">в реальном времени</span></h1><p>Сводка по накопленным заказам, уведомлениям, источникам и качеству фильтрации.</p></div>
+    <div class="hero-signals"><div class="signal"><span class="signal-label">Всего заказов</span><strong>{{ metrics.total }}</strong><span>в базе мониторинга</span></div><div class="signal"><span class="signal-label">Уведомлений</span><strong style="color:#5ee4a0">{{ metrics.notified }}</strong><span>отправлено пользователям</span></div><div class="signal"><span class="signal-label">Свежих за сутки</span><strong style="color:#7ba7ff">{{ metrics.fresh_24 }}</strong><span>за последние 24 часа</span></div><div class="signal"><span class="signal-label">Средний бюджет</span><strong style="font-size:20px;color:#f8bb52">{% if metrics.avg_price %}{{ "{:,}".format(metrics.avg_price).replace(",", " ") }} ₽{% else %}--{% endif %}</strong><span>по заказам с ценой</span></div></div>
+  </section>
+  <div class="section-head"><div><h2>Распределение по источникам</h2><p>Количество сохранённых объявлений с каждой биржи</p></div></div>
+  <section class="metric-grid" aria-label="Статистика источников">{% for key, source in sources.items() %}<article class="metric"><span class="metric-name">{{ source.name }}</span><strong class="metric-value">{{ metrics.by_source.get(key, 0) }}</strong><span class="metric-trend neutral">объявлений в базе</span></article>{% endfor %}<article class="metric"><span class="metric-name">Вакансий исключено</span><strong class="metric-value">{{ metrics.vacancies }}</strong><span class="metric-trend neutral">не попадают в топ</span></article><article class="metric"><span class="metric-name">Источников активно</span><strong class="metric-value">{{ metrics.sources_enabled }}/4</strong><span class="metric-trend">мониторинг работает</span></article></section>
+{% endblock %}

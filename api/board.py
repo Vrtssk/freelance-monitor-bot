@@ -92,6 +92,19 @@ def render_top_page(scored: list, metrics: Optional[dict] = None, base_url: str 
     )
 
 
+def render_stats_page(metrics: dict) -> str:
+    """Render the human-readable analytics page instead of raw API JSON."""
+    return templates.get_template("stats.html").render(
+        active="stats",
+        rows=[],
+        sources=SOURCES,
+        source_colors=_SOURCE_COLORS,
+        topic_colors=_TOPIC_COLORS,
+        topics_map=_TOPICS_MAP,
+        metrics=metrics,
+    )
+
+
 def render_grid_partial(
     rows: list,
     src: Optional[str] = None,

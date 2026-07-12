@@ -8,8 +8,14 @@ from pydantic import BaseModel
 from datetime import datetime, timezone
 
 from config.settings import settings
-from api.board import render_grid_partial, render_jobs_page, render_top_page
-from db.repository import board_metrics, count_stats, get_all_posts, get_relevant_posts
+from api.board import render_grid_partial, render_jobs_page, render_stats_page, render_top_page
+from db.repository import (
+    board_metrics,
+    count_stats,
+    get_all_posts,
+    get_relevant_posts,
+    latest_scrape_finished_at,
+)
 from db.session import async_session_factory, init_db
 from scrapers import get_all_scrapers
 from scheduler.monitor import monitor_service
@@ -100,10 +106,38 @@ async def board_top(request: Request, limit: int = 10, partial: bool = False, sr
     return HTMLResponse(render_top_page(scored, metrics=metrics, base_url=str(request.base_url)))
 
 
-@app.get("/stats")
-async def stats():
+@app.get("/stats", response_class=HTMLResponse)
+async def stats_page():
+    """Human-readable statistics dashboard."""
+    async with async_session_factory() as session:
+        metrics = await board_metrics(session)
+    return HTMLResponse(render_stats_page(metrics))
+
+
+@app.get("/api/stats")
+async def stats_api():
+    """Machine-readable statistics retained for API consumers."""
     async with async_session_factory() as session:
         return await count_stats(session)
+
+
+@app.get("/api/monitor/status")
+async def monitor_status():
+    """Expose real scrape timing so dashboard countdowns are not simulated."""
+    async with async_session_factory() as session:
+        last_finished = await latest_scrape_finished_at(session)
+    interval = max(60, settings.SCRAPE_INTERVAL)
+    now = datetime.now(timezone.utc)
+    if last_finished and last_finished.tzinfo is None:
+        last_finished = last_finished.replace(tzinfo=timezone.utc)
+    next_at = last_finished.timestamp() + interval if last_finished else now.timestamp()
+    return {
+        "running": monitor_service._running,
+        "enabled": settings.SCRAPE_ENABLED,
+        "interval_seconds": interval,
+        "last_finished_at": last_finished.isoformat() if last_finished else None,
+        "next_at": datetime.fromtimestamp(next_at, timezone.utc).isoformat(),
+    }
 
 
 @app.post("/scrape/run", response_model=ScrapeTriggerResponse)
@@ -112,6 +146,7 @@ async def scrape_run():
     summary = await monitor_service.run_cycle()
     # strip non-serializable posts from response
     clean = {
+        "skipped": summary.get("skipped", False),
         "notified": summary.get("notified", 0),
         "errors": summary.get("errors", []),
         "sources": {},
