@@ -41,3 +41,7 @@ db.sqlite3
 .pytest_cache/
 .ruff_cache/
 .hypothesis/
+
+# Local-only dev docs (kept on disk, not pushed to GitHub)
+DESIGN.md
+docs/
